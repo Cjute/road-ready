@@ -1,0 +1,871 @@
+<title>Omkörningsövning</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Barlow+Condensed:wght@500;600;700&display=swap">
+<style>
+/* Layout: körvy med stegkort under, metod och instrument i en smal panel till höger; staplas på telefon */
+:root{
+  --bg:#ECEFEA; --panel:#FFFFFF; --fg:#18201C; --muted:#5A6660; --line:#D3D9D3;
+  --sign:#F4C430; --red:#C8242B; --ok:#2E7D4F; --blue:#1F4E8C; --key:#E3E8E2; --warnbg:#FFF3D6; --warnfg:#7A4B00;
+  --display:"Barlow Condensed","Arial Narrow",Arial,sans-serif;
+  --body:"Atkinson Hyperlegible",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#111513; --panel:#1A201C; --fg:#E6ECE7; --muted:#9AA69F; --line:#2B332E;
+  --sign:#F2C232; --red:#E2484E; --ok:#4FB37A; --blue:#6E9BE0; --key:#252C28; --warnbg:#3A2E12; --warnfg:#FFD27A; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#111513; --panel:#1A201C; --fg:#E6ECE7; --muted:#9AA69F; --line:#2B332E;
+  --sign:#F2C232; --red:#E2484E; --ok:#4FB37A; --blue:#6E9BE0; --key:#252C28; --warnbg:#3A2E12; --warnfg:#FFD27A; color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 32px}
+.wrap{max-width:1240px;margin:0 auto;display:grid;gap:14px}
+header{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap}
+h1{font-family:var(--display);font-weight:700;font-size:34px;line-height:1;margin:0;letter-spacing:.01em;text-wrap:balance}
+header p{margin:4px 0 0;color:var(--muted);max-width:60ch}
+.tabs{display:flex;gap:6px;flex-wrap:wrap}
+.tab{appearance:none;border:1px solid var(--line);background:var(--panel);color:var(--fg);border-radius:99px;padding:6px 16px;font-family:var(--display);font-size:18px;font-weight:600;cursor:pointer}
+.tab[aria-selected="true"]{background:var(--blue);border-color:var(--blue);color:#fff}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:16px;align-items:start}
+@media (max-width:960px){.layout{grid-template-columns:minmax(0,1fr)}}
+.stage{display:grid;gap:10px;min-width:0}
+.screen{position:relative;width:100%;aspect-ratio:16/10;max-width:100%;border-radius:10px;overflow:hidden;background:#8fb3cc;user-select:none;-webkit-user-select:none;touch-action:none}
+@media (max-width:600px){.screen{aspect-ratio:4/5}}
+canvas{display:block;width:100%;height:100%}
+.hud{position:absolute;inset:0;pointer-events:none}
+.hud>*{pointer-events:auto}
+.dark{background:rgba(12,16,14,.74);color:#fff;border-radius:8px}
+.hud-bl{position:absolute;left:12px;bottom:12px;display:flex;align-items:flex-end;gap:8px;flex-wrap:wrap}
+.speedo{padding:6px 12px 4px;font-family:var(--display);display:flex;align-items:baseline;gap:6px}
+.speedo b{font-size:42px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums;min-width:2.1ch;text-align:right}
+.speedo small{font-size:15px;opacity:.8}
+.speedo.over b{color:#ff7b7b}
+.blinkers{display:flex;gap:4px;padding:8px 10px}
+.blinkers svg{width:26px;height:22px;fill:#56605a}
+.blinkers svg.lit{fill:#47d16a}
+.gap{padding:6px 10px;font-family:var(--display);font-size:17px;font-variant-numeric:tabular-nums}
+.gap.warn{color:#ffb15c}
+.limit{position:absolute;right:12px;top:12px;width:54px;height:54px;border-radius:50%;background:#fff;border:7px solid #C8242B;display:grid;place-items:center;font-family:var(--display);font-weight:700;font-size:23px;color:#111;box-shadow:0 1px 4px rgba(0,0,0,.3)}
+.helper{position:absolute;left:12px;top:12px;width:min(260px,calc(50% - 30px));padding:10px 12px;font-size:13px;line-height:1.35;display:grid;gap:6px}
+@media (max-width:600px){.helper{display:none}}
+.hh{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.hh span{font-family:var(--display);font-size:17px;font-weight:600;letter-spacing:.02em}
+.chip{font-family:var(--display);font-weight:700;font-size:15px;padding:1px 9px;border-radius:99px;letter-spacing:.04em;text-transform:uppercase;white-space:nowrap}
+.chip.go{background:#2E9A5C;color:#fff}.chip.no{background:#D63A40;color:#fff}
+.bar{position:relative;height:8px;background:rgba(255,255,255,.18);border-radius:4px;overflow:hidden}
+.bar i{position:absolute;left:0;top:0;bottom:0;background:#8fc1ff;border-radius:4px}
+.bar u{position:absolute;top:-2px;bottom:-2px;width:2px;background:#fff}
+.row{display:flex;justify-content:space-between;gap:8px;font-variant-numeric:tabular-nums}
+.note{color:#ffcf7a}
+/* parkering HUD */
+.pk-hud{position:absolute;right:12px;top:12px;display:grid;gap:8px;justify-items:end}
+.gear{display:flex;gap:2px;padding:4px}
+.gear span{font-family:var(--display);font-weight:700;font-size:24px;width:34px;text-align:center;border-radius:6px;color:#7d8780;line-height:1.3}
+.gear span.on{background:#fff;color:#111}
+.wheelbox{padding:8px 12px;display:flex;align-items:center;gap:10px}
+.wheelbox svg{width:42px;height:42px}
+.wheelbox div{display:grid;line-height:1.15}
+.wheelbox b{font-family:var(--display);font-size:19px}
+.wheelbox small{font-size:12px;opacity:.8;font-variant-numeric:tabular-nums}
+.angle{padding:6px 12px;}
+@media (max-width:600px){.pk-hud{top:auto;bottom:12px;gap:6px}.wheelbox{padding:6px 10px}.wheelbox svg{width:32px;height:32px}.gear span{font-size:20px;width:28px}}
+.angle{font-family:var(--display);font-size:19px;font-variant-numeric:tabular-nums}
+.toast{position:absolute;left:50%;top:100px;transform:translateX(-50%);max-width:min(440px,calc(100% - 32px));padding:9px 14px;border-radius:8px;color:#fff;font-size:14px;line-height:1.35;box-shadow:0 4px 14px rgba(0,0,0,.25);text-align:center;pointer-events:none}
+.toast strong{display:block;font-family:var(--display);font-size:19px;letter-spacing:.02em}
+.toast.fault{background:#B8262C}.toast.good{background:#24734A}.toast.info{background:#22313f}
+.overlay{position:absolute;inset:0;display:grid;place-items:center;background:rgba(10,14,12,.55);padding:14px}
+.card{background:var(--panel);color:var(--fg);border-radius:10px;padding:18px 20px;max-width:460px;width:100%;display:grid;gap:12px;box-shadow:0 10px 30px rgba(0,0,0,.3);max-height:100%;overflow:auto}
+.card h2{font-family:var(--display);font-size:28px;line-height:1.05;margin:0}
+.card p{margin:0;color:var(--muted)}
+.card ol{margin:0;padding-left:20px;display:grid;gap:2px;font-size:14px}
+.keys{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:14px;margin:0}
+.keys dt{font-family:var(--display);font-weight:600;white-space:nowrap}
+.keys dd{margin:0;color:var(--muted)}
+kbd{display:inline-block;background:var(--key);border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:0 6px;font-family:var(--display);font-size:14px;line-height:1.4;color:var(--fg)}
+.btn{appearance:none;border:0;border-radius:8px;background:var(--blue);color:#fff;font-family:var(--display);font-weight:700;font-size:19px;letter-spacing:.03em;padding:10px 18px;cursor:pointer}
+.btn.ghost{background:transparent;color:var(--fg);border:1px solid var(--line)}
+.btns{display:flex;gap:8px;flex-wrap:wrap}
+.btn:focus-visible,.ctl:focus-visible,.tab:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid var(--sign);outline-offset:2px}
+.sumrow{display:flex;gap:18px;flex-wrap:wrap;font-variant-numeric:tabular-nums}
+.sumrow div{display:grid}
+.sumrow b{font-family:var(--display);font-size:28px;line-height:1}
+.sumrow span{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.verdict{font-family:var(--display);font-weight:700;font-size:18px;letter-spacing:.04em;text-transform:uppercase;padding:2px 10px;border-radius:99px;justify-self:start}
+.verdict.ok{background:var(--ok);color:#fff}.verdict.no{background:var(--red);color:#fff}
+/* stegkort */
+.stepcard{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 16px;display:grid;gap:6px;min-width:0}
+.sc-top{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
+.sc-num{font-family:var(--display);font-size:14px;font-weight:600;text-transform:uppercase;letter-spacing:.1em;color:var(--muted)}
+.sc-title{font-family:var(--display);font-weight:700;font-size:26px;line-height:1.05;margin:0;text-wrap:balance}
+.sc-text{margin:0;max-width:70ch}
+.sc-meter{display:grid;gap:4px}
+.sc-meter[hidden]{display:none}
+.sc-bar{height:10px;border-radius:5px;background:var(--key);overflow:hidden;position:relative}
+.sc-bar i{position:absolute;left:0;top:0;bottom:0;background:var(--blue);border-radius:5px;transition:width .1s}
+.sc-bar i.done{background:var(--ok)}
+.sc-lab{font-family:var(--display);font-size:18px;font-variant-numeric:tabular-nums}
+.sc-warn{background:var(--warnbg);color:var(--warnfg);border-radius:6px;padding:6px 10px;font-weight:700;font-size:14px}
+.sc-extra{display:none;font-size:13.5px}
+@media (max-width:600px){.sc-extra{display:grid;gap:4px}.sc-title{font-size:22px}}
+.sc-extra .row b{font-variant-numeric:tabular-nums}
+/* Controls */
+.controls{display:grid;gap:8px}
+.controls[hidden]{display:none}
+.ot-ctl{grid-template-columns:repeat(6,minmax(0,1fr))}
+.pk-ctl{grid-template-columns:repeat(8,minmax(0,1fr))}
+@media (max-width:760px){.ot-ctl{grid-template-columns:repeat(3,minmax(0,1fr))}.pk-ctl{grid-template-columns:repeat(4,minmax(0,1fr))}}
+.ctl{appearance:none;border:1px solid var(--line);background:var(--panel);color:var(--fg);border-radius:8px;padding:10px 4px;font-family:var(--display);font-size:16px;font-weight:600;cursor:pointer;display:grid;gap:2px;justify-items:center;touch-action:none;user-select:none;-webkit-user-select:none}
+.ctl small{font-family:var(--body);font-weight:400;font-size:12px;color:var(--muted)}
+.ctl.held{background:var(--key)}
+.ctl.gas{border-color:var(--ok)}.ctl.brk{border-color:var(--red)}
+@media (hover:none){.ctl small{display:none}.ctl{padding:16px 4px}}
+/* Panel */
+.panel{display:grid;gap:12px;min-width:0}
+.box{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;display:grid;gap:10px;min-width:0}
+.box[hidden]{display:none}
+.box h3{margin:0;font-family:var(--display);font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.1em;color:var(--muted)}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.stats div{display:grid}
+.stats b{font-family:var(--display);font-size:30px;line-height:1;font-variant-numeric:tabular-nums}
+.stats span{font-size:12px;color:var(--muted)}
+.stats .ok b{color:var(--ok)}.stats .bad b{color:var(--red)}
+.set{display:flex;align-items:center;justify-content:space-between;gap:10px}
+select{font:inherit;padding:5px 8px;border-radius:6px;border:1px solid var(--line);background:var(--bg);color:var(--fg)}
+.method{list-style:none;margin:0;padding:0;display:grid;gap:2px;counter-reset:m}
+.method li{counter-increment:m;display:grid;grid-template-columns:26px 1fr;gap:8px;padding:5px 6px;border-radius:6px;font-size:14px;line-height:1.3;color:var(--muted)}
+.method li::before{content:counter(m);font-family:var(--display);font-weight:700;font-size:15px;width:22px;height:22px;border-radius:50%;display:grid;place-items:center;border:1.5px solid var(--line)}
+.method li b{display:block;color:var(--fg);font-weight:700}
+.method li.done{opacity:.6}
+.method li.done::before{content:"✓";background:var(--ok);border-color:var(--ok);color:#fff}
+.method li.active{background:var(--key);color:var(--fg)}
+.method li.active::before{background:var(--blue);border-color:var(--blue);color:#fff}
+.log{list-style:none;margin:0;padding:0;display:grid;gap:6px;max-height:200px;overflow:auto;font-size:13.5px}
+.log li{display:grid;grid-template-columns:38px 1fr;gap:6px;padding-left:8px;border-left:3px solid var(--line)}
+.log li.fault{border-color:var(--red)}.log li.good{border-color:var(--ok)}
+.log time{color:var(--muted);font-variant-numeric:tabular-nums}
+.log .empty{border:0;padding:0;display:block;color:var(--muted)}
+.lines{display:grid;gap:6px;font-size:13.5px}
+.lines div{display:grid;grid-template-columns:72px 1fr;align-items:center;gap:10px}
+.lines svg{width:72px;height:10px}
+.src{font-size:12px;color:var(--muted);margin:0}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Omkörningsövning</h1>
+      <p>Öva omkörning på landsväg, fickparkering och backparkering med en tydlig metod steg för steg.</p>
+    </div>
+    <div class="tabs" role="tablist" aria-label="Övning">
+      <button class="tab" role="tab" id="tab-ot" data-mode="ot" aria-selected="true" type="button">Omkörning</button>
+      <button class="tab" role="tab" id="tab-ficka" data-mode="ficka" aria-selected="false" type="button">Fickparkering</button>
+      <button class="tab" role="tab" id="tab-back" data-mode="back" aria-selected="false" type="button">Backparkering</button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <section class="stage">
+      <div class="screen" id="screen">
+        <canvas id="cv" aria-label="Körvy"></canvas>
+        <div class="hud" id="otHud">
+          <div class="limit" aria-label="Hastighetsgräns 90">90</div>
+          <div class="helper dark" id="helper" hidden></div>
+          <div class="hud-bl">
+            <div class="speedo dark" id="speedo"><b id="spd">70</b><small>km/h</small></div>
+            <div class="blinkers dark" aria-label="Blinkers">
+              <svg id="bl" viewBox="0 0 26 22"><path d="M0 11 12 0v6h14v10H12v6z"/></svg>
+              <svg id="br" viewBox="0 0 26 22"><path d="M26 11 14 0v6H0v10h14v6z"/></svg>
+            </div>
+            <div class="gap dark" id="gap" hidden></div>
+          </div>
+        </div>
+        <div class="hud" id="pkHud" hidden>
+          <div class="pk-hud">
+            <div class="gear dark" aria-label="Växel"><span id="gD">D</span><span id="gR">R</span></div>
+            <div class="wheelbox dark"><svg viewBox="-21 -21 42 42" aria-hidden="true"><g id="wheelG"><circle r="17" fill="none" stroke="#fff" stroke-width="4"/><path d="M-17 0H17M0 0V17" stroke="#fff" stroke-width="4"/><circle r="4" fill="#fff"/><rect x="-2" y="-21" width="4" height="7" fill="#F4C430"/></g></svg>
+              <div><b id="wheelTxt">Rakt</b><small id="wheelSub">Hjulen raka</small></div></div>
+            <div class="angle dark" id="angTxt">Vinkel 0°</div>
+          </div>
+          <div class="hud-bl">
+            <div class="blinkers dark" aria-label="Blinkers">
+              <svg id="pbl" viewBox="0 0 26 22"><path d="M0 11 12 0v6h14v10H12v6z"/></svg>
+              <svg id="pbr" viewBox="0 0 26 22"><path d="M26 11 14 0v6H0v10h14v6z"/></svg>
+            </div>
+          </div>
+        </div>
+        <div class="toast" id="toast" hidden></div>
+        <div class="overlay" id="overlay"></div>
+      </div>
+
+      <div class="stepcard" id="stepcard" aria-live="polite">
+        <div class="sc-top"><span class="sc-num" id="scNum">Metod</span></div>
+        <h2 class="sc-title" id="scTitle">Välj en övning</h2>
+        <p class="sc-text" id="scText"></p>
+        <div class="sc-meter" id="scMeter" hidden><div class="sc-lab" id="scLab"></div><div class="sc-bar"><i id="scBar"></i></div></div>
+        <div class="sc-warn" id="scWarn" hidden></div>
+        <div class="sc-extra" id="scExtra"></div>
+      </div>
+
+      <div class="controls ot-ctl" id="otCtl">
+        <button class="ctl" id="cBL" type="button">◁ Blinkers<small><kbd>Q</kbd></small></button>
+        <button class="ctl" id="cLL" type="button">Vänster fil<small><kbd>←</kbd></small></button>
+        <button class="ctl" id="cLR" type="button">Höger fil<small><kbd>→</kbd></small></button>
+        <button class="ctl" id="cBR" type="button">Blinkers ▷<small><kbd>E</kbd></small></button>
+        <button class="ctl brk" id="cBrake" type="button">Broms<small><kbd>↓</kbd></small></button>
+        <button class="ctl gas" id="cGas" type="button">Gas<small><kbd>↑</kbd></small></button>
+      </div>
+      <div class="controls pk-ctl" id="pkCtl" hidden>
+        <button class="ctl" id="pSL" type="button">↺ Ratt vänster<small>håll <kbd>←</kbd></small></button>
+        <button class="ctl" id="pSC" type="button">Räta upp<small><kbd>X</kbd></small></button>
+        <button class="ctl" id="pSR" type="button">Ratt höger ↻<small>håll <kbd>→</kbd></small></button>
+        <button class="ctl" id="pGear" type="button">Växel D/R<small><kbd>G</kbd></small></button>
+        <button class="ctl" id="pBL" type="button">◁ Blinkers<small><kbd>Q</kbd></small></button>
+        <button class="ctl" id="pBR" type="button">Blinkers ▷<small><kbd>E</kbd></small></button>
+        <button class="ctl brk" id="pBrake" type="button">Broms<small><kbd>↓</kbd></small></button>
+        <button class="ctl gas" id="pGas" type="button">Gas<small><kbd>↑</kbd></small></button>
+      </div>
+    </section>
+
+    <aside class="panel">
+      <div class="box">
+        <h3 id="stTitle">Den här körningen</h3>
+        <div class="stats">
+          <div class="ok"><b id="st1">0</b><span id="st1l">omkörningar</span></div>
+          <div class="bad"><b id="st2">0</b><span id="st2l">fel</span></div>
+          <div><b id="st3">0,0</b><span id="st3l">km körda</span></div>
+        </div>
+      </div>
+      <div class="box">
+        <h3>Metod</h3>
+        <ol class="method" id="method"></ol>
+      </div>
+      <div class="box" id="otSet">
+        <h3>Inställningar</h3>
+        <label class="set" for="diff">Mötande trafik
+          <select id="diff"><option value="latt">Gles</option><option value="normal" selected>Normal</option><option value="svar">Tät</option></select>
+        </label>
+        <label class="set" for="helpT">Visa omkörningskalkyl <input type="checkbox" id="helpT" checked></label>
+      </div>
+      <div class="box" id="pkSet" hidden>
+        <h3>Inställningar</h3>
+        <label class="set" for="guideT">Visa hjälplinjer och markeringar <input type="checkbox" id="guideT" checked></label>
+        <button class="btn ghost" id="pkRestart" type="button">Börja om övningen</button>
+      </div>
+      <div class="box">
+        <h3>Händelser</h3>
+        <ul class="log" id="log"><li class="empty">Inget har hänt än.</li></ul>
+      </div>
+      <div class="box" id="otLines">
+        <h3>Mittlinjen</h3>
+        <div class="lines">
+          <div><svg viewBox="0 0 72 10"><rect width="72" height="10" rx="2" fill="#4a4f55"/><rect x="2" y="4" width="6" height="2" fill="#fff"/><rect x="26" y="4" width="6" height="2" fill="#fff"/><rect x="50" y="4" width="6" height="2" fill="#fff"/></svg><span>Mittlinje, 3 m streck och 9 m lucka. Omkörning tillåten om det är säkert.</span></div>
+          <div><svg viewBox="0 0 72 10"><rect width="72" height="10" rx="2" fill="#4a4f55"/><rect x="2" y="4" width="18" height="2" fill="#fff"/><rect x="26" y="4" width="18" height="2" fill="#fff"/><rect x="50" y="4" width="18" height="2" fill="#fff"/></svg><span>Varningslinje, 9 m streck och 3 m lucka. Spärrlinje eller fara närmar sig.</span></div>
+          <div><svg viewBox="0 0 72 10"><rect width="72" height="10" rx="2" fill="#4a4f55"/><rect x="2" y="4" width="68" height="2" fill="#fff"/></svg><span>Spärrlinje. Får inte korsas.</span></div>
+        </div>
+        <p class="src">Bygger på trafikförordningen (1998:1276) 3 kap. och vägmärkesförordningen (2007:90).</p>
+      </div>
+      <div class="box" id="pkTips" hidden>
+        <h3>Så fungerar mätarna</h3>
+        <p class="src" style="font-size:13.5px">Ratten visar hur mycket hjulen är vridna. Vinkeln visar bilens vinkel mot kanten eller rutan. Den prickade linjen visar vart bakhjulen tar vägen med nuvarande rattutslag. I verkligheten använder du speglarna och riktmärkena i stegtexten.</p>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<script>
+(()=>{
+const $=id=>document.getElementById(id);
+const cv=$('cv'),ctx=cv.getContext('2d');
+let W=300,H=200;
+function resize(){const r=cv.getBoundingClientRect();const d=Math.min(2,window.devicePixelRatio||1);W=Math.max(1,r.width);H=Math.max(1,r.height);cv.width=Math.round(W*d);cv.height=Math.round(H*d);ctx.setTransform(d,0,0,d,0,0);}
+new ResizeObserver(resize).observe(cv);resize();
+const store={get(k,d){try{const v=localStorage.getItem(k);return v===null?d:JSON.parse(v);}catch(e){return d;}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}};
+const rnd=(a,b)=>a+Math.random()*(b-a);
+const fmt=(n,d=1)=>n.toFixed(d).replace('.',',').replace(/^-(0(,0+)?)$/,'$1');
+const cap=s=>s[0].toUpperCase()+s.slice(1);
+const narrow=window.matchMedia('(max-width:600px)');
+function hash(n){const x=Math.sin(n*127.1+311.7)*43758.5453;return x-Math.floor(x);}
+function shade(hex,f){const n=parseInt(hex.slice(1),16);let r=n>>16,g=(n>>8)&255,b=n&255;const t=f<0?0:255,p=Math.abs(f);r=Math.round((t-r)*p+r);g=Math.round((t-g)*p+g);b=Math.round((t-b)*p+b);return `rgb(${r},${g},${b})`;}
+
+/* ================= Gemensamt ================= */
+const G={mode:'ot',phase:'ready',t:0};
+const input={gas:false,brake:false,steerL:false,steerR:false};
+let logList=[],toastTimer=0;
+function clock(){const t=Math.floor(G.t);return Math.floor(t/60)+':'+String(t%60).padStart(2,'0');}
+function toast(title,detail,kind){const el=$('toast');el.className='toast '+kind;el.innerHTML='';const s=document.createElement('strong');s.textContent=title;el.appendChild(s);if(detail){const d=document.createElement('span');d.textContent=detail;el.appendChild(d);}el.hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>{el.hidden=true;},kind==='fault'?4200:2800);}
+function event(kind,title,detail,quiet){if(!quiet)toast(title,detail,kind);logList.unshift({kind,t:clock(),text:title+(detail?'. '+detail:'')});if(logList.length>40)logList.pop();renderLog();}
+function renderLog(){const ul=$('log');ul.innerHTML='';if(!logList.length){const li=document.createElement('li');li.className='empty';li.textContent='Inget har hänt än.';ul.appendChild(li);return;}
+  for(const e of logList){const li=document.createElement('li');li.className=e.kind;const t=document.createElement('time');t.textContent=e.t;const sp=document.createElement('span');sp.textContent=e.text;li.append(t,sp);ul.appendChild(li);}}
+function setStats(a,al,b,bl,c,cl){$('st1').textContent=a;$('st1l').textContent=al;$('st2').textContent=b;$('st2l').textContent=bl;$('st3').textContent=c;$('st3l').textContent=cl;}
+
+/* Stegkort och metodlista */
+let methodKey='';
+function renderMethod(steps,active,doneUpTo){
+  const key=G.mode+steps.length;const ol=$('method');
+  if(key!==methodKey){methodKey=key;ol.innerHTML='';for(const s of steps){const li=document.createElement('li');const d=document.createElement('div');const b=document.createElement('b');b.textContent=s.title;d.appendChild(b);d.appendChild(document.createTextNode(s.short||''));li.appendChild(d);ol.appendChild(li);}}
+  [...ol.children].forEach((li,i)=>{li.className=i===active?'active':i<doneUpTo?'done':'';});
+}
+let lastCard='';
+function setCard(num,title,text,meter,warn,extra){
+  const sig=[num,title,text,meter?meter.label+'|'+Math.round(meter.frac*100)+'|'+meter.done:'',warn||'',extra||''].join('§');
+  if(sig===lastCard)return;lastCard=sig;
+  $('scNum').textContent=num;$('scTitle').textContent=title;$('scText').textContent=text;
+  if(meter){$('scMeter').hidden=false;$('scLab').textContent=meter.label;const b=$('scBar');b.style.width=Math.max(0,Math.min(100,meter.frac*100))+'%';b.classList.toggle('done',!!meter.done);}else $('scMeter').hidden=true;
+  const w=$('scWarn');if(warn){w.hidden=false;w.textContent=warn;}else w.hidden=true;
+  $('scExtra').innerHTML=extra||'';
+}
+
+/* Lägen */
+const ov=$('overlay');
+function showOverlay(html){ov.innerHTML=html;ov.hidden=false;const b=ov.querySelector('button');if(b)setTimeout(()=>{try{b.focus({preventScroll:true});}catch(_){}},0);}
+ov.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(!b)return;const a=b.dataset.act;if(a==='retry'){restartMode();start();}else if(a==='next'){switchMode(b.dataset.mode);}else primary();});
+function primary(){if(G.phase==='ready')start();else if(G.phase==='pause'){G.phase='run';ov.hidden=true;}else if(G.phase==='end'){restartMode();start();}}
+function start(){G.phase='run';ov.hidden=true;if(G.mode==='ot')info('Lastbil framför','Följ metoden under körvyn.');}
+function togglePause(){if(G.phase==='run'){G.phase='pause';input.gas=input.brake=input.steerL=input.steerR=false;showOverlay(`<div class="card"><h2>Paus</h2><p>Bilen står still tills du fortsätter.</p><button class="btn" data-act="go" type="button">Fortsätt</button></div>`);}else if(G.phase==='pause')primary();}
+function restartMode(){G.t=0;logList=[];renderLog();lastCard='';if(G.mode==='ot')OT.reset();else PK.reset(G.mode);}
+function switchMode(m){
+  G.mode=m;document.querySelectorAll('.tab').forEach(t=>t.setAttribute('aria-selected',String(t.dataset.mode===m)));
+  const ot=m==='ot';$('otHud').hidden=!ot;$('pkHud').hidden=ot;$('otCtl').hidden=!ot;$('pkCtl').hidden=ot;$('otSet').hidden=!ot;$('pkSet').hidden=ot;$('otLines').hidden=!ot;$('pkTips').hidden=ot;
+  input.gas=input.brake=input.steerL=input.steerR=false;methodKey='';$('toast').hidden=true;clearTimeout(toastTimer);
+  restartMode();G.phase='ready';
+  if(ot)OT.startScreen();else PK.startScreen();
+  store.set('omk-mode',m);
+}
+document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{if(t.dataset.mode!==G.mode)switchMode(t.dataset.mode);}));
+$('pkRestart').addEventListener('click',()=>{restartMode();start();});
+
+/* Tangenter */
+document.addEventListener('keydown',e=>{
+  const tag=e.target&&e.target.tagName;if(tag==='SELECT'||tag==='INPUT')return;
+  const c=e.code;
+  if(c==='ArrowUp'||c==='KeyW'){input.gas=true;e.preventDefault();return;}
+  if(c==='ArrowDown'||c==='KeyS'){input.brake=true;e.preventDefault();return;}
+  if(G.mode!=='ot'){if(c==='ArrowLeft'||c==='KeyA'){input.steerL=true;e.preventDefault();return;}if(c==='ArrowRight'||c==='KeyD'){input.steerR=true;e.preventDefault();return;}}
+  if(e.repeat)return;
+  if(G.mode==='ot'){if(c==='ArrowLeft'||c==='KeyA'){OT.changeLane(-1);e.preventDefault();}else if(c==='ArrowRight'||c==='KeyD'){OT.changeLane(1);e.preventDefault();}}
+  else{if(c==='KeyG'||c==='KeyR')PK.toggleGear();else if(c==='KeyX'||c==='KeyC')PK.center();}
+  if(c==='KeyQ')blink(-1);else if(c==='KeyE')blink(1);
+  else if(c==='KeyP'||c==='Escape')togglePause();
+  else if((c==='Space'||c==='Enter')&&tag!=='BUTTON'){if(G.phase!=='run')primary();e.preventDefault();}
+});
+document.addEventListener('keyup',e=>{const c=e.code;if(c==='ArrowUp'||c==='KeyW')input.gas=false;if(c==='ArrowDown'||c==='KeyS')input.brake=false;if(c==='ArrowLeft'||c==='KeyA')input.steerL=false;if(c==='ArrowRight'||c==='KeyD')input.steerR=false;});
+function blink(d){if(G.phase!=='run')return;if(G.mode==='ot')OT.toggleBlink(d);else PK.toggleBlink(d);}
+function hold(id,key){const el=$(id);const on=e=>{e.preventDefault();input[key]=true;el.classList.add('held');try{el.setPointerCapture(e.pointerId);}catch(_){}};const off=()=>{input[key]=false;el.classList.remove('held');};
+  el.addEventListener('pointerdown',on);el.addEventListener('pointerup',off);el.addEventListener('pointercancel',off);el.addEventListener('lostpointercapture',off);el.addEventListener('contextmenu',e=>e.preventDefault());}
+const tap=(id,fn)=>$(id).addEventListener('pointerdown',e=>{e.preventDefault();fn();});
+hold('cGas','gas');hold('cBrake','brake');hold('pGas','gas');hold('pBrake','brake');hold('pSL','steerL');hold('pSR','steerR');
+tap('cBL',()=>blink(-1));tap('cBR',()=>blink(1));tap('cLL',()=>OT.changeLane(-1));tap('cLR',()=>OT.changeLane(1));
+tap('pBL',()=>blink(-1));tap('pBR',()=>blink(1));tap('pGear',()=>PK.toggleGear());tap('pSC',()=>PK.center());
+document.addEventListener('visibilitychange',()=>{if(document.hidden&&G.phase==='run')togglePause();});
+function info(t,d){event('info',t,d);}
+
+/* ================= Omkörning ================= */
+const OT=(()=>{
+const KMH=1/3.6,LIMIT=90,LANE_R=0,LANE_L=-3.5,CENTER=-1.75,EDGE_R=1.75,EDGE_L=-5.25;
+const DRAW=820,CAM_BACK=8,CAM_H=2.2,WARN=70;
+const MIR={hz:0.6,f:3.75,camH:1.3,w:3.4};
+const KINDS={lastbil:{name:'lastbilen',l:16.5,w:2.55,h:4.0,v:[60,68]},traktor:{name:'traktorn',l:5,w:2.3,h:2.9,v:[25,35]},husvagn:{name:'husvagnsekipaget',l:12,w:2.3,h:2.7,v:[64,72]},buss:{name:'bussen',l:12,w:2.55,h:3.3,v:[68,75]},bil:{name:'en mötande bil',l:4.5,w:1.8,h:1.5},mlastbil:{name:'en mötande lastbil',l:16.5,w:2.55,h:3.9}};
+const DIFF={latt:{gap:[24,38],group:[1,2]},normal:{gap:[14,25],group:[1,3]},svar:{gap:[8,16],group:[2,4]}};
+const TRUCK_COLS=['#d8d4c8','#2f5d8a','#a8352c','#ecebe5','#3f6b45','#7c858c'];
+const CAR_COLS=['#c9ccd1','#1f3f73','#8a1f24','#2b2b2b','#e9e7e1','#4f6d52','#6b5a3e'];
+const STEPS=[
+  {title:'Håll avstånd',short:'Minst 2 sekunder bakom, så att du ser förbi.'},
+  {title:'Läs vägen',short:'Streckad linje, fri sikt och ingen mötande som hinner fram.'},
+  {title:'Spegel och blinka vänster',short:'Kolla speglar och döda vinkeln. Blinka.'},
+  {title:'Sväng ut',short:'Byt till vänster körfält och öka farten, högst 90.'},
+  {title:'Kör förbi',short:'Håll farten tills du passerat hela fordonet.'},
+  {title:'Backspegeln och blinka höger',short:'Vänta tills hela fordonet syns i innerbackspegeln.'},
+  {title:'Tillbaka',short:'Byt till höger körfält. Blinkersen slås av.'}];
+let diff=store.get('omk-diff','normal');if(!DIFF[diff])diff='normal';
+let showHelp=store.get('omk-help',true);
+$('diff').value=diff;$('helpT').checked=showHelp;
+$('diff').addEventListener('change',e=>{diff=e.target.value;store.set('omk-diff',diff);});
+$('helpT').addEventListener('change',e=>{showHelp=e.target.checked;store.set('omk-help',showHelp);});
+let S;
+function reset(){
+  S={p:{s:0,x:0,targetX:0,v:70*KMH,blink:0,blinkSince:0,changing:false,l:4.5,w:1.8,h:1.45},camX:0,slow:[],onc:[],nextOnc:9,id:1,course:[],courseEnd:0,
+    group:0,stats:{ok:0,faults:0},flags:{solid:false,speed:false},closeT:0,leftAhead:null,sight:DRAW,gapT:null,maxStep:0};
+  ensureCourse(3000);spawnSlow(45,'lastbil');spawnSlow(rnd(420,520),pickSlow());updateStats();
+}
+function updateStats(){setStats(S.stats.ok,'omkörningar',S.stats.faults,'fel',fmt(S.p.s/1000),'km körda');}
+function fault(t,d){S.stats.faults++;updateStats();event('fault',t,d);}
+function good(t,d){event('good',t,d);}
+/* väg */
+function ensureCourse(upTo){while(S.courseEnd<upTo){const flat=S.course.length===0?900:rnd(380,900);S.course.push({s0:S.courseEnd,len:flat,H:0});S.courseEnd+=flat;
+  const len=rnd(200,380),Hh=Math.random()<0.7?rnd(7,16):-rnd(4,10);const pc={s0:S.courseEnd,len,H:Hh};if(Hh>0){pc.a=pc.s0+len*0.18;pc.b=pc.s0+len*0.82;}S.course.push(pc);S.courseEnd+=len;}}
+function pieceIndex(s){const c=S.course;let lo=0,hi=c.length-1;while(lo<hi){const m=(lo+hi+1)>>1;if(c[m].s0<=s)lo=m;else hi=m-1;}return lo;}
+function elev(s){if(s<0)return 0;const c=S.course[pieceIndex(s)];if(!c.H)return 0;const t=(s-c.s0)/c.len;return c.H*(1-Math.cos(2*Math.PI*t))/2;}
+function zoneAt(s){const i=pieceIndex(s);for(let k=i;k<=i+1&&k<S.course.length;k++){const c=S.course[k];if(c.a===undefined)continue;if(s>=c.a&&s<=c.b)return 2;if(s>=c.a-WARN&&s<c.a)return 1;}return 0;}
+function nextSolid(s){for(let k=pieceIndex(s);k<S.course.length;k++){const c=S.course[k];if(c.a===undefined)continue;if(s<=c.b)return Math.max(0,c.a-s);}return Infinity;}
+/* trafik */
+function pickSlow(){const r=Math.random();return r<.45?'lastbil':r<.7?'traktor':r<.9?'husvagn':'buss';}
+function spawnSlow(s,kind){const k=KINDS[kind];S.slow.push({id:S.id++,kind,s,x:LANE_R,v:rnd(k.v[0],k.v[1])*KMH,l:k.l,w:k.w,h:k.h,col:kind==='lastbil'?TRUCK_COLS[(Math.random()*TRUCK_COLS.length)|0]:kind==='buss'?(Math.random()<.5?'#c7372f':'#2a6bb0'):'#3d7a35'});}
+function spawnOnc(){const truck=Math.random()<.22,kind=truck?'mlastbil':'bil',k=KINDS[kind];
+  S.onc.push({id:S.id++,kind,s:S.p.s+DRAW+90,x:LANE_L,v:(truck?rnd(74,82):rnd(82,98))*KMH,l:k.l,w:k.w,h:k.h,col:truck?TRUCK_COLS[(Math.random()*TRUCK_COLS.length)|0]:CAR_COLS[(Math.random()*CAR_COLS.length)|0],flash:false,vis:false});
+  const r=DIFF[diff];if(S.group>0){S.group--;S.nextOnc=G.t+rnd(2,4.5);}else{S.group=Math.round(rnd(r.group[0],r.group[1]))-1;S.nextOnc=G.t+rnd(r.gap[0],r.gap[1]);}}
+/* backspegel: hur långt bakom måste fordonet vara för att synas helt */
+function mirrorDist(v){const p=S.p;return (p.s+0.3)-(v.s+v.l/2);}
+function mirrorNeed(v){const o=Math.abs(v.x-S.p.x)+v.w/2;return Math.max((v.h-MIR.camH)*MIR.f/MIR.hz,MIR.camH*MIR.f/(1-MIR.hz),o*MIR.f/(MIR.w/2));}
+function lastPassed(){const p=S.p;if(!S.leftAhead)return null;const ps=S.slow.filter(v=>S.leftAhead.has(v.id)&&v.s<p.s);return ps.length?ps.reduce((a,b)=>a.s>b.s?a:b):null;}
+/* kontroller */
+function toggleBlink(dir){const p=S.p;p.blink=p.blink===dir?0:dir;p.blinkSince=G.t;}
+function changeLane(dir){
+  if(G.phase!=='run')return;const p=S.p,target=dir<0?LANE_L:LANE_R;if(p.targetX===target)return;
+  if(p.blink!==dir)fault('Ingen blinkers',dir<0?'Blinka vänster (Q) innan du svänger ut.':'Blinka höger (E) innan du går tillbaka.');
+  else if(G.t-p.blinkSince<0.8)info('Blinka i god tid','Ge andra några sekunder att se att du byter körfält.');
+  if(dir<0)S.leftAhead=new Set(S.slow.filter(v=>v.s+v.l/2>p.s-p.l/2&&(v.s-v.l/2)-(p.s+p.l/2)<80).map(v=>v.id));
+  else{const last=lastPassed();if(last){const d=mirrorDist(last),need=mirrorNeed(last);
+    if(d>=0&&d<need)fault('För tidig återgång',`${cap(KINDS[last.kind].name)} syntes inte helt i backspegeln. Du var ${fmt(d,0)} m framför, vänta tills ca ${fmt(need,0)} m.`);}}
+  p.targetX=target;p.changing=true;
+}
+function laneDone(){const p=S.p;p.changing=false;p.blink=0;
+  if(p.targetX===LANE_R&&S.leftAhead){const passed=S.slow.filter(v=>S.leftAhead.has(v.id)&&v.s+v.l/2<p.s-p.l/2);
+    if(passed.length){S.stats.ok+=passed.length;updateStats();good('Omkörning klar',passed.length>1?`Du körde om ${passed.length} fordon.`:`Du körde om ${KINDS[passed[0].kind].name}.`);}
+    else info('Omkörningen avbröts','Att avbryta i tid är rätt när vägen inte räcker.');S.leftAhead=null;}}
+function overlap(a,b){return Math.abs(a.s-b.s)<(a.l+b.l)/2-0.1&&Math.abs(a.x-b.x)<(a.w+b.w)/2-0.05;}
+function crash(who){G.phase='end';input.gas=input.brake=false;
+  const reason=who.kind==='bil'||who.kind==='mlastbil'?`Du krockade med ${KINDS[who.kind].name} i vänster körfält.`:`Du körde in i ${KINDS[who.kind].name}.`;
+  const tip=who.kind==='bil'||who.kind==='mlastbil'?'Gå igenom steg 2 igen: räcker den fria vägen hela omkörningen? Om inte, vänta.':'Håll avståndet i steg 1 och bromsa i tid.';
+  event('fault','Krock',reason,true);
+  showOverlay(`<div class="card"><h2>Krock</h2><p>${reason}</p><p>${tip}</p><div class="sumrow"><div><b>${S.stats.ok}</b><span>omkörningar</span></div><div><b>${S.stats.faults}</b><span>fel</span></div><div><b>${fmt(S.p.s/1000)}</b><span>km</span></div></div><button class="btn" data-act="retry" type="button">Kör igen</button></div>`);}
+function startScreen(){showOverlay(`<div class="card"><h2>Kör om säkert</h2><p>Du ligger bakom en lastbil på en 90-väg. Följ metoden. Det aktuella steget visas under körvyn.</p>
+<ol>${STEPS.map(s=>`<li>${s.title}</li>`).join('')}</ol>
+<dl class="keys"><dt><kbd>↑</kbd> <kbd>↓</kbd></dt><dd>Gas och broms</dd><dt><kbd>Q</kbd> <kbd>E</kbd></dt><dd>Blinkers vänster och höger</dd><dt><kbd>←</kbd> <kbd>→</kbd></dt><dd>Byt körfält</dd><dt><kbd>P</kbd></dt><dd>Paus</dd></dl>
+<button class="btn" data-act="start" type="button">Starta</button></div>`);}
+/* fysik */
+function update(dt){
+  const p=S.p;
+  let a;if(input.brake)a=-7;else if(input.gas)a=3.2*(1-p.v/(160*KMH));else a=-0.35-0.0006*p.v*p.v;
+  a-=9.81*((elev(p.s+1)-elev(p.s-1))/2)*0.6;
+  p.v=Math.max(0,Math.min(160*KMH,p.v+a*dt));p.s+=p.v*dt;
+  const dx=p.targetX-p.x,step=2.3*dt;if(Math.abs(dx)<=step){p.x=p.targetX;if(p.changing)laneDone();}else p.x+=Math.sign(dx)*step;
+  S.camX+=(p.x*0.85-S.camX)*Math.min(1,dt*6);
+  S.slow.sort((a,b)=>a.s-b.s);
+  for(let i=0;i<S.slow.length;i++){const v=S.slow[i],n=S.slow[i+1];const base=v.base||(v.base=v.v);let target=base;if(n&&n.s-v.s<45&&n.v<target)target=n.v;v.v+=(target-v.v)*Math.min(1,dt*2);v.s+=v.v*dt;}
+  const inLeft=p.x-p.w/2<CENTER;
+  for(const o of S.onc){const d=o.s-p.s;if(inLeft&&d>0&&d<(p.v+o.v)*4.5)o.flash=true;if(o.flash)o.v=Math.max(40*KMH,o.v-3*dt);o.s-=o.v*dt;}
+  ensureCourse(p.s+1500);if(G.t>S.nextOnc)spawnOnc();
+  const ahead=S.slow.filter(v=>v.s>p.s);if(ahead.length<2){const far=ahead.length?ahead[ahead.length-1].s:p.s;spawnSlow(Math.max(far+rnd(260,520),p.s+DRAW+60),pickSlow());}
+  S.slow=S.slow.filter(v=>v.s>p.s-200);S.onc=S.onc.filter(o=>o.s>p.s-40);
+  for(const v of S.slow)if(overlap(p,v))return crash(v);
+  for(const o of S.onc)if(overlap(p,o))return crash(o);
+  const z=zoneAt(p.s);
+  if(inLeft&&z===2){if(!S.flags.solid){S.flags.solid=true;fault('Över spärrlinjen','Heldragen mittlinje får inte korsas. Vänta tills linjen blir streckad.');}}else S.flags.solid=false;
+  if(p.v>(LIMIT+5)*KMH){if(!S.flags.speed){S.flags.speed=true;fault('För hög hastighet',`Du körde ${Math.round(p.v/KMH)} km/h där gränsen är ${LIMIT}. Gränsen gäller även vid omkörning.`);}}else if(p.v<LIMIT*KMH)S.flags.speed=false;
+  S.gapT=null;
+  if(!inLeft){const front=S.slow.filter(v=>v.s>p.s&&Math.abs(v.x-p.x)<2);if(front.length){const v=front[0],gap=(v.s-v.l/2)-(p.s+p.l/2);if(p.v>3)S.gapT=gap/p.v;
+    if(gap>0&&p.v>30*KMH&&gap<p.v*1.0){S.closeT+=dt;if(S.closeT>2&&!v.closeFlag){v.closeFlag=true;fault('För kort avstånd',`Under en sekund bakom ${KINDS[v.kind].name}. Släpp gasen tills du har minst 2 sekunder.`);}}else S.closeT=Math.max(0,S.closeT-dt);}}
+  if(Math.floor(G.t*2)!==Math.floor((G.t-dt)*2))updateStats();
+}
+/* kalkyl */
+function helperInfo(){
+  const p=S.p;const c=S.slow.filter(v=>v.s+v.l/2>p.s-p.l/2&&(v.s-v.l/2)-(p.s+p.l/2)<120);if(!c.length)return null;
+  const t=c.reduce((a,b)=>a.s<b.s?a:b);const rel=LIMIT*KMH-t.v;
+  if((t.s+t.l/2+15)-(p.s-p.l/2)<=0)return null;
+  // räkna med att bilen accelererar till högst 90 km/h
+  let v=p.v,x=p.s-p.l/2,tx=t.s+t.l/2+15,tp=0;const x0=x;
+  while(x<tx&&tp<60){const a=v<LIMIT*KMH?3.2*(1-v/(160*KMH)):0;if(v<LIMIT*KMH)v=Math.min(LIMIT*KMH,v+a*0.1);x+=v*0.1;tx+=t.v*0.1;tp+=0.1;}
+  const travel=x-x0;
+  const vis=S.onc.filter(o=>o.vis&&o.s>p.s).sort((a,b)=>a.s-b.s)[0];
+  const need=(travel+tp*(vis?vis.v:90*KMH))*1.1;const avail=vis?Math.min(vis.s-p.s,S.sight):S.sight;
+  const sol=nextSolid(p.s),solidBlock=sol<travel;
+  return {t,tp,need,avail,ok:rel>0.5&&avail>=need&&!solidBlock,vis:!!vis,sol,solidBlock,slowRel:rel<=0.5};
+}
+function helperHTML(h){
+  const max=Math.max(h.need,h.avail,1);const notes=[];
+  if(h.slowRel)notes.push(`${cap(KINDS[h.t.kind].name)} kör nästan lika fort som gränsen tillåter. Stanna kvar bakom.`);
+  else{if(h.solidBlock)notes.push(h.sol<=0?'Spärrlinje just nu.':`Spärrlinje om ${Math.round(h.sol)} m.`);if(h.vis)notes.push('Mötande fordon syns.');else if(S.sight<600)notes.push(`Sikten skyms efter ${Math.round(S.sight)} m.`);}
+  return `<div class="hh"><span>Räcker vägen?</span><b class="chip ${h.ok?'go':'no'}">${h.ok?'Fri väg':'Vänta'}</b></div>
+  <div class="row"><span>Behövs</span><b>${h.slowRel?'–':Math.round(h.need)+' m'}</b></div>
+  <div class="row"><span>${h.vis?'Till mötande':'Fri sikt'}</span><b>${Math.round(h.avail)} m</b></div>
+  <div class="bar"><i style="width:${Math.min(100,h.avail/max*100)}%"></i>${h.slowRel?'':`<u style="left:${Math.min(99,h.need/max*100)}%"></u>`}</div>
+  <div class="row"><span>Omkörningen tar</span><b>${h.slowRel?'–':'ca '+fmt(h.tp)+' s'}</b></div>${notes.map(n=>`<div class="note">${n}</div>`).join('')}`;
+}
+/* metodsteg */
+function methodState(){
+  const p=S.p,h=helperInfo(),goingLeft=p.targetX===LANE_L;const inLeftLane=p.x<CENTER;
+  const res={i:-1,meter:null,warn:null};
+  if(!goingLeft&&!inLeftLane){
+    if(!h){res.title='Kör vidare';res.text='Håll farten och kör på. Nästa fordon dyker snart upp framför dig.';return res;}
+    const gt=S.gapT;
+    if(gt!==null&&gt<2){res.i=0;res.text=`Släpp gasen eller bromsa lätt. Med minst 2 sekunders avstånd ser du förbi ${KINDS[h.t.kind].name} och hinner planera.`;res.meter={label:`Avstånd ${fmt(Math.max(0,gt))} s av 2 s`,frac:gt/2};if(gt<1)res.warn='För nära. Öka avståndet.';return res;}
+    if(!h.ok){res.i=1;res.text=h.slowRel?'Fordonet kör nästan i hastighetsgränsen. En omkörning skulle ta för lång tid. Stanna kvar bakom.':'Titta långt fram. Kör inte om förrän det finns fri väg för hela omkörningen. Vänta bakom så länge rutan säger Vänta.';
+      res.meter=h.slowRel?null:{label:`Fri väg ${Math.round(h.avail)} m av ${Math.round(h.need)} m som behövs`,frac:h.avail/h.need};
+      if(h.solidBlock)res.warn=h.sol<=0?'Spärrlinje. Du får inte köra om här.':`Spärrlinje om ${Math.round(h.sol)} m. Du hinner inte före den.`;return res;}
+    if(p.blink!==-1){res.i=2;res.text='Vägen räcker. Titta i backspegeln och vänster sidospegel, kolla döda vinkeln och blinka vänster med Q.';res.meter={label:`Fri väg ${Math.round(h.avail)} m av ${Math.round(h.need)} m`,frac:1,done:true};return res;}
+    res.i=3;res.text='Blinkersen är på. Byt till vänster körfält med ← och ge gas. Håll högst 90 km/h.';return res;
+  }
+  const last=lastPassed();
+  const ahead=S.leftAhead?S.slow.filter(v=>S.leftAhead.has(v.id)&&v.s+v.l/2>=p.s-p.l/2):[];
+  if(goingLeft&&ahead.length){const t=ahead.reduce((a,b)=>a.s>b.s?a:b);/* sista fordonet i gruppen som ska passeras */const left=(t.s+t.l/2)-(p.s-p.l/2);
+    res.i=goingLeft&&!inLeftLane?3:4;res.text=res.i===3?'Du byter till vänster körfält. Ge gas.':`Håll farten och kör förbi hela ${KINDS[t.kind].name}. Titta fram mot mötande trafik.`;
+    res.meter={label:`Kvar att passera ${Math.round(Math.max(0,left))} m`,frac:1-left/(t.l+p.l+20)};
+    if(h&&!h.ok&&!h.slowRel&&(h.vis||h.solidBlock))res.warn=h.solidBlock?'Spärrlinje närmar sig. Hinner du inte, bromsa och gå tillbaka bakom.':'Mötande fordon. Hinner du inte, bromsa och gå tillbaka bakom fordonet.';
+    if(p.v>LIMIT*KMH+0.5)res.warn='Du kör över 90. Gränsen gäller även nu.';return res;}
+  if(goingLeft&&last){const d=mirrorDist(last),need=mirrorNeed(last);
+    if(d<need){res.i=5;res.text=`Fortsätt framåt. Titta i innerbackspegeln. Vänta tills hela ${KINDS[last.kind].name} syns i spegeln.`;res.meter={label:`Avstånd bakåt ${fmt(Math.max(0,d),0)} m av ca ${fmt(need,0)} m`,frac:d/need};return res;}
+    if(p.blink!==1){res.i=5;res.text=`Hela ${KINDS[last.kind].name} syns i backspegeln. Blinka höger med E.`;res.meter={label:'Syns helt i spegeln',frac:1,done:true};return res;}
+    res.i=6;res.text='Byt tillbaka till höger körfält med →. Mjukt, utan att bromsa.';return res;}
+  if(!goingLeft&&inLeftLane){res.i=6;res.text='Du går tillbaka till ditt körfält.';return res;}
+  res.i=3;res.title='Vänster körfält';res.text=p.blink!==1?'Inget fordon att köra om. Blinka höger (E) och gå tillbaka till höger körfält.':'Byt tillbaka med →.';res.i=6;return res;
+}
+function renderCard(){
+  if(G.phase!=='run'&&G.phase!=='pause'){setCard('Metod · Omkörning','Tryck Starta','Följ stegen. Det aktuella steget visas här.',null,null,'');renderMethod(STEPS,-1,0);return;}
+  const m=methodState();
+  if(m.i>=0){S.maxStep=m.i;}
+  const ex=narrow.matches&&showHelp?(()=>{const h=helperInfo();return h?helperHTML(h).replace(/class="note"/g,'class="note" style="color:var(--warnfg)"'):'';})():'';
+  setCard(m.i>=0?`Steg ${m.i+1} av ${STEPS.length}`:'Metod',m.title||STEPS[m.i].title,m.text,m.meter,m.warn,ex);
+  renderMethod(STEPS,m.i,m.i<0?0:m.i);
+}
+function renderHelper(){const el=$('helper');if(!showHelp||G.phase!=='run'){el.hidden=true;return;}const h=helperInfo();if(!h){el.hidden=true;return;}el.innerHTML=helperHTML(h);el.hidden=false;}
+/* ritning */
+function quad(x1a,x1b,y1,x2a,x2b,y2,col){ctx.fillStyle=col;ctx.beginPath();ctx.moveTo(x1a,y1+0.6);ctx.lineTo(x1b,y1+0.6);ctx.lineTo(x2b,y2);ctx.lineTo(x2a,y2);ctx.closePath();ctx.fill();}
+function rr(x,y,w,h,r){r=Math.max(0,Math.min(r,w/2,h/2));ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();}
+function shadow(sx,sy,w,h){ctx.fillStyle='rgba(0,0,0,.28)';ctx.beginPath();ctx.ellipse(sx,sy,w*0.58,Math.max(1,h*0.05),0,0,Math.PI*2);ctx.fill();}
+function wheels(x0,w,sy,ww,wh){ctx.fillStyle='#141414';ctx.fillRect(x0+w*0.04,sy-wh,ww,wh);ctx.fillRect(x0+w*0.96-ww,sy-wh,ww,wh);}
+function carBack(sx,sy,sc,v,col,blink){const w=v.w*sc,h=v.h*sc,x0=sx-w/2;shadow(sx,sy,w,h);wheels(x0,w,sy,w*0.17,h*0.2);
+  ctx.fillStyle=col;rr(x0,sy-h*0.64,w,h*0.5,h*0.1);ctx.fill();ctx.beginPath();ctx.moveTo(x0+w*0.07,sy-h*0.6);ctx.lineTo(x0+w*0.93,sy-h*0.6);ctx.lineTo(x0+w*0.8,sy-h);ctx.lineTo(x0+w*0.2,sy-h);ctx.closePath();ctx.fill();
+  ctx.fillStyle='#1b2631';ctx.beginPath();ctx.moveTo(x0+w*0.14,sy-h*0.63);ctx.lineTo(x0+w*0.86,sy-h*0.63);ctx.lineTo(x0+w*0.76,sy-h*0.94);ctx.lineTo(x0+w*0.24,sy-h*0.94);ctx.closePath();ctx.fill();
+  ctx.fillStyle='rgba(255,255,255,.12)';ctx.fillRect(x0+w*0.3,sy-h*0.9,w*0.18,h*0.22);
+  ctx.fillStyle='#b3121a';ctx.fillRect(x0+w*0.03,sy-h*0.54,w*0.22,h*0.1);ctx.fillRect(x0+w*0.75,sy-h*0.54,w*0.22,h*0.1);
+  ctx.fillStyle=shade(col,-0.45);ctx.fillRect(x0+w*0.03,sy-h*0.22,w*0.94,h*0.08);
+  ctx.fillStyle='#f4f4ef';ctx.fillRect(sx-w*0.12,sy-h*0.36,w*0.24,h*0.09);ctx.fillStyle='#2554a0';ctx.fillRect(sx-w*0.12,sy-h*0.36,w*0.03,h*0.09);
+  if(blink){ctx.fillStyle='#ffb21a';const bx=blink<0?x0+w*0.01:x0+w*0.85;ctx.fillRect(bx,sy-h*0.55,w*0.14,h*0.12);ctx.fillStyle='rgba(255,178,26,.35)';ctx.beginPath();ctx.arc(bx+w*0.07,sy-h*0.49,w*0.16,0,Math.PI*2);ctx.fill();}}
+function truckBack(sx,sy,sc,v){const w=v.w*sc,h=v.h*sc,x0=sx-w/2;shadow(sx,sy,w,h);wheels(x0,w,sy,w*0.28,h*0.13);
+  ctx.fillStyle=v.col;ctx.fillRect(x0,sy-h,w,h*0.85);ctx.fillStyle=shade(v.col,-0.18);ctx.fillRect(sx-Math.max(.5,w*0.006),sy-h*0.97,Math.max(1,w*0.012),h*0.8);ctx.fillRect(x0,sy-h*0.17,w,h*0.02);
+  ctx.strokeStyle='#d7262b';ctx.lineWidth=Math.max(1,sc*0.05);ctx.strokeRect(x0+sc*0.04,sy-h+sc*0.04,w-sc*0.08,h*0.85-sc*0.08);
+  ctx.fillStyle='#202020';ctx.fillRect(x0+w*0.1,sy-h*0.13,w*0.8,h*0.045);ctx.fillStyle='#b3121a';ctx.fillRect(x0+w*0.03,sy-h*0.2,w*0.14,h*0.045);ctx.fillRect(x0+w*0.83,sy-h*0.2,w*0.14,h*0.045);
+  ctx.fillStyle='#f4f4ef';ctx.fillRect(sx-w*0.09,sy-h*0.12,w*0.18,h*0.035);}
+function busBack(sx,sy,sc,v){const w=v.w*sc,h=v.h*sc,x0=sx-w/2;shadow(sx,sy,w,h);wheels(x0,w,sy,w*0.2,h*0.12);
+  ctx.fillStyle=v.col;rr(x0,sy-h,w,h*0.9,w*0.06);ctx.fill();ctx.fillStyle='#1b2631';ctx.fillRect(x0+w*0.08,sy-h*0.93,w*0.84,h*0.3);
+  ctx.fillStyle='#ffd45a';ctx.fillRect(x0+w*0.25,sy-h*0.97,w*0.5,h*0.035);ctx.fillStyle='#b3121a';ctx.fillRect(x0+w*0.03,sy-h*0.45,w*0.07,h*0.22);ctx.fillRect(x0+w*0.9,sy-h*0.45,w*0.07,h*0.22);
+  ctx.fillStyle=shade(v.col,-0.45);ctx.fillRect(x0,sy-h*0.16,w,h*0.06);}
+function caravanBack(sx,sy,sc,v){const w=v.w*sc,h=v.h*sc,x0=sx-w/2;shadow(sx,sy,w,h);wheels(x0,w,sy,w*0.14,h*0.16);
+  ctx.fillStyle='#ecebe5';rr(x0,sy-h,w,h*0.88,w*0.12);ctx.fill();ctx.fillStyle='#8f9aa3';ctx.fillRect(x0,sy-h*0.5,w,h*0.04);
+  ctx.fillStyle='#2a3640';rr(x0+w*0.3,sy-h*0.82,w*0.4,h*0.24,w*0.04);ctx.fill();ctx.fillStyle='#b3121a';ctx.fillRect(x0+w*0.03,sy-h*0.3,w*0.12,h*0.08);ctx.fillRect(x0+w*0.85,sy-h*0.3,w*0.12,h*0.08);
+  ctx.fillStyle='#f4f4ef';ctx.fillRect(sx-w*0.1,sy-h*0.24,w*0.2,h*0.07);}
+function lgf(tx,ty,ts){ctx.fillStyle='#c41e1e';ctx.beginPath();ctx.moveTo(tx,ty-ts);ctx.lineTo(tx+ts*1.05,ty+ts*0.75);ctx.lineTo(tx-ts*1.05,ty+ts*0.75);ctx.closePath();ctx.fill();
+  ctx.fillStyle='#ff7a1a';ctx.beginPath();ctx.moveTo(tx,ty-ts*0.55);ctx.lineTo(tx+ts*0.62,ty+ts*0.5);ctx.lineTo(tx-ts*0.62,ty+ts*0.5);ctx.closePath();ctx.fill();}
+function tractorBack(sx,sy,sc,v){const w=v.w*sc,h=v.h*sc,x0=sx-w/2;shadow(sx,sy,w,h);
+  ctx.fillStyle='#161616';rr(x0,sy-h*0.62,w*0.27,h*0.62,w*0.04);ctx.fill();rr(x0+w*0.73,sy-h*0.62,w*0.27,h*0.62,w*0.04);ctx.fill();
+  ctx.strokeStyle='#333';ctx.lineWidth=Math.max(1,w*0.012);for(let i=1;i<6;i++){const yy=sy-h*0.62*i/6;ctx.beginPath();ctx.moveTo(x0,yy);ctx.lineTo(x0+w*0.27,yy);ctx.moveTo(x0+w*0.73,yy);ctx.lineTo(x0+w,yy);ctx.stroke();}
+  ctx.fillStyle='#3d7a35';ctx.fillRect(x0+w*0.27,sy-h*0.56,w*0.46,h*0.4);ctx.fillStyle='rgba(170,200,214,.55)';ctx.fillRect(x0+w*0.22,sy-h*0.96,w*0.56,h*0.42);
+  ctx.strokeStyle='#1e2a22';ctx.lineWidth=Math.max(1,w*0.03);ctx.strokeRect(x0+w*0.22,sy-h*0.96,w*0.56,h*0.42);ctx.fillStyle='#2b5c26';ctx.fillRect(x0+w*0.18,sy-h,w*0.64,h*0.06);
+  lgf(sx,sy-h*0.34,w*0.13);ctx.fillStyle='#b3121a';ctx.fillRect(x0+w*0.3,sy-h*0.2,w*0.07,h*0.05);ctx.fillRect(x0+w*0.63,sy-h*0.2,w*0.07,h*0.05);}
+function tractorFront(sx,sy,sc,v){const w=v.w*sc,h=v.h*sc,x0=sx-w/2;shadow(sx,sy,w,h);
+  ctx.fillStyle='#161616';rr(x0,sy-h*0.62,w*0.27,h*0.62,w*0.04);ctx.fill();rr(x0+w*0.73,sy-h*0.62,w*0.27,h*0.62,w*0.04);ctx.fill();
+  ctx.fillStyle='#3d7a35';ctx.fillRect(x0+w*0.32,sy-h*0.6,w*0.36,h*0.45);ctx.fillStyle='rgba(170,200,214,.6)';ctx.fillRect(x0+w*0.22,sy-h*0.98,w*0.56,h*0.4);
+  ctx.fillStyle='#fffbe0';ctx.fillRect(x0+w*0.34,sy-h*0.5,w*0.08,h*0.06);ctx.fillRect(x0+w*0.58,sy-h*0.5,w*0.08,h*0.06);}
+function glow(x,y,r,a){const g=ctx.createRadialGradient(x,y,0,x,y,r);g.addColorStop(0,`rgba(255,250,215,${a})`);g.addColorStop(1,'rgba(255,250,215,0)');ctx.fillStyle=g;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();}
+function lights(v,xl,xr,y,w){const on=v.flash&&(Math.floor(G.t*5)%2===0);const r=on?w*0.9:w*0.18,a=on?0.85:0.4;glow(xl,y,r,a);glow(xr,y,r,a);}
+function carFront(sx,sy,sc,v){const w=v.w*sc,h=v.h*sc,x0=sx-w/2;shadow(sx,sy,w,h);wheels(x0,w,sy,w*0.17,h*0.2);
+  ctx.fillStyle=v.col;rr(x0,sy-h*0.62,w,h*0.48,h*0.1);ctx.fill();ctx.beginPath();ctx.moveTo(x0+w*0.08,sy-h*0.58);ctx.lineTo(x0+w*0.92,sy-h*0.58);ctx.lineTo(x0+w*0.8,sy-h);ctx.lineTo(x0+w*0.2,sy-h);ctx.closePath();ctx.fill();
+  ctx.fillStyle='#22303b';ctx.beginPath();ctx.moveTo(x0+w*0.13,sy-h*0.61);ctx.lineTo(x0+w*0.87,sy-h*0.61);ctx.lineTo(x0+w*0.77,sy-h*0.94);ctx.lineTo(x0+w*0.23,sy-h*0.94);ctx.closePath();ctx.fill();
+  ctx.fillStyle='#151515';ctx.fillRect(sx-w*0.22,sy-h*0.42,w*0.44,h*0.12);ctx.fillStyle='#fffbe0';ctx.fillRect(x0+w*0.05,sy-h*0.5,w*0.2,h*0.09);ctx.fillRect(x0+w*0.75,sy-h*0.5,w*0.2,h*0.09);
+  lights(v,x0+w*0.15,x0+w*0.85,sy-h*0.45,w);}
+function truckFront(sx,sy,sc,v){const w=v.w*sc,h=v.h*sc,x0=sx-w/2;shadow(sx,sy,w,h);wheels(x0,w,sy,w*0.2,h*0.13);
+  ctx.fillStyle=v.col;rr(x0,sy-h,w,h*0.87,w*0.05);ctx.fill();ctx.fillStyle='#22303b';ctx.fillRect(x0+w*0.06,sy-h*0.93,w*0.88,h*0.3);
+  ctx.fillStyle='#262626';ctx.fillRect(x0+w*0.2,sy-h*0.55,w*0.6,h*0.28);ctx.fillStyle=shade(v.col,-0.4);ctx.fillRect(x0,sy-h*0.2,w,h*0.07);
+  ctx.fillStyle='#fffbe0';ctx.fillRect(x0+w*0.04,sy-h*0.27,w*0.14,h*0.06);ctx.fillRect(x0+w*0.82,sy-h*0.27,w*0.14,h*0.06);lights(v,x0+w*0.11,x0+w*0.89,sy-h*0.24,w);}
+function tree(sx,sy,sc,t){const h=t.h*sc,w=h*0.36;ctx.fillStyle='#4a3826';ctx.fillRect(sx-Math.max(1,w*0.05),sy-h*0.2,Math.max(2,w*0.1),h*0.2);
+  const g=['#1f3d2a','#24452f','#2b5036'];for(let i=0;i<3;i++){const yb=sy-h*(0.12+i*0.27),ww=w*(1-i*0.25);ctx.fillStyle=g[(i+(t.r*3|0))%3];ctx.beginPath();ctx.moveTo(sx-ww/2,yb);ctx.lineTo(sx+ww/2,yb);ctx.lineTo(sx,yb-h*(0.5-i*0.04));ctx.closePath();ctx.fill();}}
+function house(sx,sy,sc){const w=9*sc,h=4*sc,x0=sx-w/2;ctx.fillStyle='#8e2a1f';ctx.fillRect(x0,sy-h,w,h);ctx.fillStyle='#f2efe6';ctx.fillRect(x0,sy-h,w*0.04,h);ctx.fillRect(x0+w*0.96,sy-h,w*0.04,h);
+  ctx.fillRect(x0+w*0.2,sy-h*0.75,w*0.14,h*0.4);ctx.fillRect(x0+w*0.62,sy-h*0.75,w*0.14,h*0.4);ctx.fillStyle='#2b3440';ctx.fillRect(x0+w*0.22,sy-h*0.72,w*0.1,h*0.34);ctx.fillRect(x0+w*0.64,sy-h*0.72,w*0.1,h*0.34);
+  ctx.fillStyle='#2c2a2a';ctx.beginPath();ctx.moveTo(x0-w*0.04,sy-h);ctx.lineTo(x0+w*1.04,sy-h);ctx.lineTo(sx,sy-h*1.75);ctx.closePath();ctx.fill();}
+function sign(sx,sy,sc){const ph=2.2*sc,r=0.38*sc;ctx.fillStyle='#8a9096';ctx.fillRect(sx-Math.max(1,sc*0.04),sy-ph,Math.max(2,sc*0.08),ph);
+  ctx.fillStyle='#c8242b';ctx.beginPath();ctx.arc(sx,sy-ph-r,r,0,Math.PI*2);ctx.fill();ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(sx,sy-ph-r,r*0.76,0,Math.PI*2);ctx.fill();
+  if(r>6){ctx.fillStyle='#111';ctx.font=`700 ${r*0.95}px "Barlow Condensed",Arial,sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('90',sx,sy-ph-r+r*0.05);}}
+function drawMirror(){
+  const p=S.p,mh=Math.max(34,Math.min(60,W*0.07)),mw=mh*MIR.w,mx=W/2-mw/2,my=10;
+  ctx.save();rr(mx-4,my-4,mw+8,mh+8,10);ctx.fillStyle='#14181a';ctx.fill();rr(mx,my,mw,mh,7);ctx.clip();
+  const hz=my+mh*MIR.hz,f=MIR.f*mh,cx=mx+mw/2;
+  const sky=ctx.createLinearGradient(0,my,0,hz);sky.addColorStop(0,'#9fc0d8');sky.addColorStop(1,'#dbe6e8');ctx.fillStyle=sky;ctx.fillRect(mx,my,mw,mh);
+  ctx.fillStyle='#4f6b54';ctx.fillRect(mx,hz-mh*0.06,mw,mh*0.06);ctx.fillStyle='#6a944b';ctx.fillRect(mx,hz,mw,mh);
+  const near=1.5,scn=f/near,X=(x,sc)=>cx+(x-p.x)*sc;
+  ctx.fillStyle='#4a4f55';ctx.beginPath();ctx.moveTo(cx,hz);ctx.lineTo(X(EDGE_R,scn),hz+MIR.camH*scn);ctx.lineTo(X(EDGE_L,scn),hz+MIR.camH*scn);ctx.closePath();ctx.fill();
+  ctx.strokeStyle='rgba(255,255,255,.85)';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(cx,hz);ctx.lineTo(X(CENTER,scn),hz+MIR.camH*scn);ctx.stroke();
+  const behind=S.slow.filter(v=>mirrorDist(v)>1).sort((a,b)=>mirrorDist(b)-mirrorDist(a));
+  for(const v of behind){const d=mirrorDist(v),sc=f/d,sx=X(v.x,sc),sy=hz+MIR.camH*sc;
+    if(v.kind==='traktor')tractorFront(sx,sy,sc,v);else truckFront(sx,sy,sc,{...v,col:v.kind==='husvagn'?'#ecebe5':v.col,flash:false});}
+  ctx.restore();
+  ctx.fillStyle='rgba(255,255,255,.7)';ctx.font='600 11px "Barlow Condensed",Arial,sans-serif';ctx.textAlign='center';ctx.textBaseline='top';ctx.fillText('INNERBACKSPEGEL',W/2,my+mh+5);
+}
+function render(){
+  const p=S.p,camS=p.s-CAM_BACK,camY=elev(camS)+CAM_H;const F=Math.max(W*0.8,H*0.9),HZ=H*0.4,cx=W/2,camX=S.camX;const X=(x,sc)=>cx+(x-camX)*sc;
+  const sky=ctx.createLinearGradient(0,0,0,HZ);sky.addColorStop(0,'#8db6d6');sky.addColorStop(1,'#dde8ea');ctx.fillStyle=sky;ctx.fillRect(0,0,W,H);
+  const k=H/420;ctx.fillStyle='#8aa69a';ctx.beginPath();ctx.moveTo(0,HZ+2);for(let i=0;i<=40;i++){const x=W*i/40,u=i/40*6-camX*0.02;ctx.lineTo(x,HZ-(16+9*Math.sin(u*1.7)+6*Math.sin(u*3.9+1))*k);}ctx.lineTo(W,HZ+2);ctx.fill();
+  ctx.fillStyle='#4d6a55';ctx.beginPath();ctx.moveTo(0,HZ+2);for(let i=0;i<=120;i++){const x=W*i/120,u=i/120*8-camX*0.04;ctx.lineTo(x,HZ-(5+3*Math.sin(u*2.3)+2.5*Math.abs(Math.sin(u*37)))*k);}ctx.lineTo(W,HZ+2);ctx.fill();
+  ctx.fillStyle='#6a944b';ctx.fillRect(0,HZ,W,H-HZ);
+  let maxY=H;const segs=[];let sight=null;let s=Math.floor(camS+0.5)+1;const proj=ss=>{const sc=F/(ss-camS);return{sc,y:HZ-(elev(ss)-camY)*sc};};let prev=proj(s);
+  while(s<camS+DRAW){const ds=s-camS;let step=ds<120?1:ds<300?3:6;if(s%step)step=step-(s%step);const s2=s+step,nx=proj(s2),clip=maxY;
+    if(nx.y>=maxY){if(sight===null&&s-p.s>8)sight=s-p.s;segs.push({s,clip});s=s2;prev=nx;continue;}
+    let y1=prev.y,sc1=prev.sc;if(y1>maxY){const t=(y1-maxY)/(y1-nx.y);sc1=sc1+(nx.sc-sc1)*t;y1=maxY;}const y2=nx.y,sc2=nx.sc;
+    ctx.fillStyle=(Math.floor(s/12)%2)?'#6f9a4f':'#68934a';ctx.fillRect(0,y2,W,y1-y2+0.6);
+    quad(X(EDGE_L-1,sc1),X(EDGE_R+1,sc1),y1,X(EDGE_L-1,sc2),X(EDGE_R+1,sc2),y2,'#8d8a79');
+    quad(X(EDGE_L,sc1),X(EDGE_R,sc1),y1,X(EDGE_L,sc2),X(EDGE_R,sc2),y2,(Math.floor(s/6)%2)?'#4b5057':'#474c53');
+    quad(X(EDGE_L+0.15,sc1),X(EDGE_L+0.27,sc1),y1,X(EDGE_L+0.15,sc2),X(EDGE_L+0.27,sc2),y2,'#e9e9e4');
+    quad(X(EDGE_R-0.27,sc1),X(EDGE_R-0.15,sc1),y1,X(EDGE_R-0.27,sc2),X(EDGE_R-0.15,sc2),y2,'#e9e9e4');
+    const z=zoneAt(s),m=((s%12)+12)%12;if(z===2||(z===1?m<9:m<3))quad(X(CENTER-0.07,sc1),X(CENTER+0.07,sc1),y1,X(CENTER-0.07,sc2),X(CENTER+0.07,sc2),y2,'#f4f4ef');
+    segs.push({s,clip});maxY=y2;s=s2;prev=nx;}
+  S.sight=sight===null?DRAW-CAM_BACK:sight;
+  const segClip=ss=>{if(!segs.length||ss<segs[0].s)return H;let lo=0,hi=segs.length-1;while(lo<hi){const m=(lo+hi+1)>>1;if(segs[m].s<=ss)lo=m;else hi=m-1;}return segs[lo].clip;};
+  const spr=[];const k0=Math.floor((camS+2)/9),k1=Math.floor((camS+360)/9);
+  for(let kk=k0;kk<=k1;kk++){for(const side of[-1,1]){if(hash(kk*2+(side>0?1:0))<0.3)continue;const ss=kk*9+hash(kk*5+side)*6,off=3+hash(kk*3+side*7)*15;spr.push({type:'tree',s:ss,x:side<0?EDGE_L-off:EDGE_R+off,h:8+hash(kk*11+side)*9,r:hash(kk*13+side)});}
+    if(hash(kk*7+3)<0.02){const side=hash(kk*17)<0.5?-1:1;spr.push({type:'house',s:kk*9+4,x:side<0?EDGE_L-14:EDGE_R+14});}}
+  for(let n=Math.max(0,Math.floor((camS-200)/1300));n<=Math.floor((camS+DRAW-200)/1300);n++)spr.push({type:'sign',s:200+n*1300,x:EDGE_R+1.3});
+  for(const v of S.slow)spr.push({type:'slow',v,s:v.s-v.l/2,x:v.x});
+  for(const o of S.onc){o.vis=false;spr.push({type:'onc',v:o,s:o.s-o.l/2,x:o.x});}
+  spr.sort((a,b)=>b.s-a.s);
+  for(const it of spr){const dz=it.s-camS;if(dz<1||dz>DRAW)continue;const sc=F/dz,sy=HZ-(elev(it.s)-camY)*sc,sx=X(it.x,sc),clip=segClip(it.s);
+    const top=sy-(it.v?it.v.h:it.type==='tree'?it.h:it.type==='house'?7:3)*sc;if(top>=clip)continue;if(sx<-W*0.6||sx>W*1.6)continue;if(it.type==='onc')it.v.vis=true;
+    ctx.save();ctx.beginPath();ctx.rect(0,0,W,clip);ctx.clip();
+    if(it.type==='tree')tree(sx,sy,sc,it);else if(it.type==='house')house(sx,sy,sc);else if(it.type==='sign')sign(sx,sy,sc);
+    else if(it.type==='slow'){const v=it.v;if(v.kind==='lastbil')truckBack(sx,sy,sc,v);else if(v.kind==='buss')busBack(sx,sy,sc,v);else if(v.kind==='husvagn')caravanBack(sx,sy,sc,v);else tractorBack(sx,sy,sc,v);}
+    else{const v=it.v;if(v.kind==='bil')carFront(sx,sy,sc,v);else truckFront(sx,sy,sc,v);}ctx.restore();}
+  const ps=p.s-p.l/2,dz=ps-camS,sc=F/dz,sy=HZ-(elev(ps)-camY)*sc;const blinkOn=p.blink&&(Math.floor((G.t-p.blinkSince)*2.6)%2===0);
+  carBack(X(p.x,sc),sy,sc,p,'#2f6db5',blinkOn?p.blink:0);
+  drawMirror();
+  const kmh=Math.round(p.v/KMH);$('spd').textContent=kmh;$('speedo').classList.toggle('over',kmh>LIMIT+5);
+  $('bl').classList.toggle('lit',!!(blinkOn&&p.blink<0));$('br').classList.toggle('lit',!!(blinkOn&&p.blink>0));
+  const g=$('gap');if(S.gapT!==null&&S.gapT<6&&G.phase==='run'){g.hidden=false;g.textContent='Avstånd '+fmt(Math.max(0,S.gapT))+' s';g.classList.toggle('warn',S.gapT<2);}else g.hidden=true;
+  renderHelper();renderCard();
+}
+return {reset,update,render,startScreen,changeLane,toggleBlink,get S(){return S;},helperInfo,methodState,mirrorNeed,mirrorDist};
+})();
+
+/* ================= Parkering ================= */
+const PK=(()=>{
+const L=2.7,OF=0.9,OR=0.9,HW=0.9,MAXD=35*Math.PI/180,R=L/Math.tan(MAXD),DEG=180/Math.PI;
+const FIX={gap:7.5,lat:0.8};         // fickparkering: lucka 7,5 m, sidavstånd 0,8 m
+const BAY={w:2.5,d:5,aisle:6.5,cue:3.75,y0:3.4}; // backparkering
+let P;let guides=store.get('omk-guides',true);$('guideT').checked=guides;$('guideT').addEventListener('change',e=>{guides=e.target.checked;store.set('omk-guides',guides);});
+function corners(c){const cs=Math.cos(c.th),sn=Math.sin(c.th);return [[-OR,-HW],[-OR,HW],[L+OF,HW],[L+OF,-HW]].map(([a,b])=>[c.x+a*cs-b*sn,c.y+a*sn+b*cs]);}
+function proj(pts,ax){let mn=1e9,mx=-1e9;for(const p of pts){const d=p[0]*ax[0]+p[1]*ax[1];if(d<mn)mn=d;if(d>mx)mx=d;}return[mn,mx];}
+function hitRect(c,r){const P=corners(c),Rr=[[r.x0,r.y0],[r.x1,r.y0],[r.x1,r.y1],[r.x0,r.y1]],axes=[[1,0],[0,1],[Math.cos(c.th),Math.sin(c.th)],[-Math.sin(c.th),Math.cos(c.th)]];
+  for(const ax of axes){const a=proj(P,ax),b=proj(Rr,ax);if(a[1]<b[0]||b[1]<a[0])return false;}return true;}
+const FSTEPS=[
+ {title:'Kör fram bredvid den blå bilen',short:'Bakhjulen i höjd med dess bakre stötfångare.',
+  text:'Rulla sakta fram (↑) med ca 0,5–1 m sidavstånd till den blå bilen. Stanna (↓) när dina bakhjul är i höjd med den blå bilens bakre stötfångare, vid den gula markeringen.',
+  check:m=>m.stop&&Math.abs(m.c.x)<0.3&&m.lat>0.45&&m.lat<1.2&&Math.abs(m.thd)<4,
+  meter:m=>{const d=-m.c.x;return {label:d>0.3?`Kvar till markeringen ${fmt(d)} m`:d<-0.3?`${fmt(-d)} m förbi markeringen`:'Vid markeringen. Stanna.',frac:1-Math.abs(d)/13,done:Math.abs(d)<0.3};},
+  warn:m=>m.c.x>0.35?'Du har kört förbi markeringen. Växla till backen (G) och backa tillbaka till den.':m.lat<0.45?'För nära den blå bilen. Håll ca 0,5–1 m sidavstånd.':m.lat>1.2?'För långt från den blå bilen. Håll ca 0,5–1 m sidavstånd.':null},
+ {title:'Blinka höger',short:'Visa att du ska parkera.',text:'Slå på höger blinkers (E) så att trafiken bakom ser att du ska parkera.',check:m=>m.blink===1},
+ {title:'Lägg i backen',short:'Kontrollera runt bilen.',text:'Växla till backen (G). Titta i speglarna och över axeln så att ingen kommer bakifrån.',check:m=>m.gear==='R'&&m.stop},
+ {title:'Vrid ratten helt åt höger',short:'Stå still medan du vrider.',text:'Håll inne → tills ratten är helt åt höger. Stå still under tiden.',
+  check:m=>m.df<=-0.97&&m.stop,meter:m=>({label:`Ratt ${Math.round(Math.max(0,-m.df)*100)} % åt höger`,frac:Math.max(0,-m.df),done:m.df<=-0.97}),
+  warn:m=>!m.stop?'Stanna (↓) och vrid klart först.':m.df>0.05?'Fel håll. Ratten ska vridas åt höger (→).':null},
+ {title:'Backa tills bilen står i 45°',short:'Bakvagnen svänger in i luckan.',text:'Backa sakta (↑) med fullt rattutslag åt höger. Bakvagnen svänger in mot luckan. Stanna (↓) när vinkeln är 45°. Riktmärke: i vänster backspegel ser du hela fronten på bilen bakom.',
+  check:m=>m.stop&&m.thd>=41&&m.thd<=49,meter:m=>({label:`Vinkel ${Math.round(m.thd)}° av 45°`,frac:m.thd/45,done:m.thd>=41&&m.thd<=49}),
+  warn:m=>m.gear!=='R'&&m.thd<41?'Lägg i backen (G).':m.thd>49?'För stor vinkel. Lägg i D och rulla fram en bit, så minskar vinkeln.':m.df>-0.9&&m.thd<41?'Håll ratten helt åt höger.':null},
+ {title:'Räta upp ratten',short:'Hjulen raka. Stå still.',text:'Tryck Räta upp (X) eller håll ← tills hjulen är raka. Stå still medan du vrider.',
+  check:m=>Math.abs(m.df)<0.04&&m.stop,meter:m=>({label:Math.abs(m.df)<0.04?'Hjulen raka':`Ratt ${Math.round(Math.abs(m.df)*100)} % åt ${m.df<0?'höger':'vänster'}`,frac:1-Math.abs(m.df),done:Math.abs(m.df)<0.04}),warn:m=>!m.stop?'Stanna (↓) och räta upp ratten först.':null},
+ {title:'Backa rakt en kort bit',short:'Tills högra framhörnet passerat blå bilens bakhörn.',text:'Backa sakta rakt bakåt i 45°. Stanna när mätaren visar 0. Riktmärke: ditt högra framhörn har precis passerat den blå bilens bakre hörn.',
+  check:m=>m.stop&&m.rem<0.08&&m.rem>-0.25&&Math.abs(m.df)<0.08,
+  meter:m=>({label:m.rem>0.08?`Kvar att backa ${fmt(m.rem)} m`:m.rem<-0.25?`${fmt(-m.rem)} m för långt`:'Stanna här.',frac:1-Math.max(0,m.rem)/1.5,done:m.rem<0.08&&m.rem>-0.25}),
+  warn:m=>Math.abs(m.df)>=0.08?'Ratten ska vara rak i det här steget.':m.rem<-0.25?'Du har backat för långt. Lägg i D och rulla fram rakt en bit.':m.gear!=='R'&&m.rem>0.08?'Lägg i backen (G).':null},
+ {title:'Vrid ratten helt åt vänster',short:'Stå still medan du vrider.',text:'Håll inne ← tills ratten är helt åt vänster. Stå still.',
+  check:m=>m.df>=0.97&&m.stop,meter:m=>({label:`Ratt ${Math.round(Math.max(0,m.df)*100)} % åt vänster`,frac:Math.max(0,m.df),done:m.df>=0.97}),warn:m=>!m.stop?'Stanna (↓) och vrid klart först.':m.df<-0.05?'Fel håll. Ratten ska vridas åt vänster (←).':null},
+ {title:'Backa tills bilen är rak',short:'Fronten svänger in mot kanten.',text:'Backa sakta med fullt rattutslag åt vänster. Fronten svänger in mot trottoarkanten. Stanna när vinkeln är 0°, alltså när bilen står parallellt med kanten.',
+  check:m=>m.stop&&Math.abs(m.thd)<3,meter:m=>({label:`Vinkel ${Math.round(m.thd)}°, mål 0°`,frac:1-Math.max(0,m.thd)/45,done:Math.abs(m.thd)<3}),
+  warn:m=>m.thd<-3?'Bilen har vridit förbi rakt. Vrid ratten lite åt höger och backa en kort bit.':m.gear!=='R'&&m.thd>3?'Lägg i backen (G).':null},
+ {title:'Räta upp och justera',short:'Lika långt fram och bak.',text:'Räta upp ratten (X), lägg i D och rulla fram så att avståndet blir ungefär lika fram och bak. Stanna.',
+  check:m=>m.stop&&Math.abs(m.df)<0.05&&m.fg>0.25&&m.rg>0.25&&Math.abs(m.fg-m.rg)<0.8,
+  meter:m=>({label:`Fram ${fmt(m.fg)} m · bak ${fmt(m.rg)} m`,frac:1-Math.min(1,Math.abs(m.fg-m.rg)/2.5),done:Math.abs(m.fg-m.rg)<0.8}),
+  warn:m=>Math.abs(m.df)>=0.05?'Räta upp ratten först (X).':m.fg<=0.25?'För nära bilen framför. Backa lite.':m.rg<=0.25?'För nära bilen bakom. Kör fram lite.':null},
+ {title:'Blinkers av',short:'Parkeringen är klar.',text:'Slå av blinkersen (E). Klart!',check:m=>m.blink===0&&m.stop}];
+const BSTEPS=[
+ {title:'Kör fram mitt i körbanan',short:'Bakhjulen vid den gula linjen.',
+  text:'Rulla sakta fram (↑) mitt i körbanan, förbi den gröna rutan. Stanna (↓) när dina bakhjul är i höjd med den gula linjen, alltså den andra linjen efter din ruta.',
+  check:m=>m.stop&&Math.abs(m.c.x-BAY.cue)<0.3&&m.c.y>2.9&&m.c.y<3.9&&Math.abs(m.thd)<4,
+  meter:m=>{const d=BAY.cue-m.c.x;return {label:d>0.3?`Kvar till gula linjen ${fmt(d)} m`:d<-0.3?`${fmt(-d)} m förbi linjen`:'Vid linjen. Stanna.',frac:1-Math.abs(d)/16,done:Math.abs(d)<0.3};},
+  warn:m=>m.c.x>BAY.cue+0.4?'Du har kört förbi linjen. Växla till backen (G) och backa tillbaka.':m.c.y<2.9?'För nära rutorna. Håll dig mitt i körbanan.':m.c.y>3.9?'För långt ut. Håll dig mitt i körbanan.':null},
+ {title:'Blinka höger',short:'Visa vart du ska.',text:'Slå på höger blinkers (E).',check:m=>m.blink===1},
+ {title:'Lägg i backen',short:'Kontrollera runt bilen.',text:'Växla till backen (G). Titta i speglarna och över axeln.',check:m=>m.gear==='R'&&m.stop},
+ {title:'Vrid ratten helt åt höger',short:'Stå still medan du vrider.',text:'Håll inne → tills ratten är helt åt höger. Stå still.',
+  check:m=>m.df<=-0.97&&m.stop,meter:m=>({label:`Ratt ${Math.round(Math.max(0,-m.df)*100)} % åt höger`,frac:Math.max(0,-m.df),done:m.df<=-0.97}),warn:m=>!m.stop?'Stanna (↓) och vrid klart först.':m.df>0.05?'Fel håll. Ratten ska åt höger (→).':null},
+ {title:'Backa in tills bilen är rak',short:'Stanna vid 90°.',text:'Backa sakta med fullt rattutslag. Följ höger backspegel: bilen svänger in i rutan. Stanna när vinkeln är 90°, alltså när bilen står rak i rutan.',
+  check:m=>m.stop&&Math.abs(m.thd-90)<4,meter:m=>({label:`Vinkel ${Math.round(m.thd)}° av 90°`,frac:m.thd/90,done:Math.abs(m.thd-90)<4}),
+  warn:m=>m.thd>94?'Vinkeln har gått förbi 90°. Lägg i D och rulla fram en kort bit med samma rattutslag.':m.gear!=='R'&&m.thd<86?'Lägg i backen (G).':m.df>-0.9&&m.thd<86?'Håll ratten helt åt höger.':null},
+ {title:'Räta upp ratten',short:'Hjulen raka.',text:'Tryck Räta upp (X) eller håll ← tills hjulen är raka. Stå still.',
+  check:m=>Math.abs(m.df)<0.04&&m.stop,meter:m=>({label:Math.abs(m.df)<0.04?'Hjulen raka':`Ratt ${Math.round(Math.abs(m.df)*100)} % åt ${m.df<0?'höger':'vänster'}`,frac:1-Math.abs(m.df),done:Math.abs(m.df)<0.04}),warn:m=>!m.stop?'Stanna (↓) och räta upp ratten först.':null},
+ {title:'Backa rakt in i rutan',short:'Stanna ca 30 cm före bakkanten.',text:'Backa sakta rakt bakåt. Stanna när mätaren visar 0, ungefär 30 cm före rutans bakkant.',
+  check:m=>m.stop&&m.back>0.05&&m.back<0.6&&m.frontIn,meter:m=>({label:m.back>0.6?`Kvar att backa ${fmt(m.back-0.3)} m`:m.back<=0.05?'För långt bak':'Stanna här.',frac:1-Math.max(0,m.back-0.3)/4,done:m.back>0.05&&m.back<0.6}),
+  warn:m=>Math.abs(m.df)>=0.08?'Ratten ska vara rak i det här steget.':m.back<=0.05?'Du är för långt bak. Kör fram lite.':m.gear!=='R'&&m.back>0.6?'Lägg i backen (G).':null},
+ {title:'Blinkers av',short:'Parkeringen är klar.',text:'Slå av blinkersen (E). Klart!',check:m=>m.blink===0&&m.stop}];
+function reset(type){
+  const ficka=type==='ficka';
+  P={type,steps:ficka?FSTEPS:BSTEPS,step:0,hold:0,t:0,rem:0,warns:0,lastWarn:null,warnT:0,blink:0,blinkSince:0,gear:'D',center:false,
+    car:ficka?{x:-13,y:2.0+FIX.lat+HW,th:0,d:0,v:0}:{x:-11,y:BAY.y0,th:0,d:0,v:0},obs:[],done:false};
+  if(ficka){P.obs=[{name:'A',x0:0,x1:4.5,y0:0.2,y1:2.0,col:'#2a5caa'},{name:'B',x0:-FIX.gap-4.5,x1:-FIX.gap,y0:0.2,y1:2.0,col:'#8a9198'},{name:'kant',x0:-60,x1:60,y0:-4,y1:0,hidden:true}];}
+  else{for(const k of[-3,-2,-1,1,2,3]){const cols=['#8a9198','#b8352d','#e6e4dd','#2f4f6f','#4f6d52','#2b2b2b'];P.obs.push({name:'grannbilen',x0:k*BAY.w-0.9,x1:k*BAY.w+0.9,y0:-4.8,y1:-0.3,col:cols[(k+3)%6]});}
+    P.obs.push({name:'motsida',x0:-60,x1:60,y0:BAY.aisle,y1:BAY.aisle+4,hidden:true});P.obs.push({name:'bakkant',x0:-60,x1:60,y0:-9,y1:-BAY.d-0.15,hidden:true});}
+  updateStats();
+}
+function updateStats(){setStats(Math.min(P.step+1,P.steps.length)+'/'+P.steps.length,'steg',P.warns,'påminnelser',fmtTime(P.t),'tid');}
+function fmtTime(t){t=Math.floor(t);return Math.floor(t/60)+':'+String(t%60).padStart(2,'0');}
+function toggleBlink(d){P.blink=P.blink===d?0:d;P.blinkSince=G.t;}
+function toggleGear(){if(G.phase!=='run')return;if(Math.abs(P.car.v)>0.05){info('Stanna först','Stå helt still innan du byter växel.');return;}P.gear=P.gear==='D'?'R':'D';}
+function center(){if(G.phase!=='run')return;P.center=true;}
+function metrics(){
+  const c=P.car,P4=corners(c),thd=c.th*DEG,df=c.d/MAXD,stop=Math.abs(c.v)<0.03&&!input.gas;
+  const m={c,thd,df,stop,gear:P.gear,blink:P.blink};
+  if(P.type==='ficka'){
+    m.lat=Math.min(...P4.map(p=>p[1]))-2.0;
+    m.curb=Math.min(...P4.map(p=>p[1]));
+    const pc=c.y+R*(Math.cos(c.th)-1)-HW;const sn=Math.sin(c.th);m.rem=sn>0.2?(pc-0.32)/sn:0;
+    m.fg=0-Math.max(...P4.map(p=>p[0]));m.rg=Math.min(...P4.map(p=>p[0]))+FIX.gap;
+  }else{
+    m.back=Math.min(...P4.map(p=>p[1]))+BAY.d;m.frontIn=Math.max(...P4.map(p=>p[1]))<=0.05;m.off=c.x;
+  }
+  return m;
+}
+function update(dt){
+  if(P.step>=P.steps.length||G.phase!=='run')return;
+  const c=P.car;P.t+=dt;
+  const rate=0.42;
+  if(input.steerL){c.d=Math.min(MAXD,c.d+rate*dt);P.center=false;}
+  if(input.steerR){c.d=Math.max(-MAXD,c.d-rate*dt);P.center=false;}
+  if(P.center){const st=rate*1.6*dt;if(Math.abs(c.d)<=st){c.d=0;P.center=false;}else c.d-=Math.sign(c.d)*st;}
+  const dir=P.gear==='D'?1:-1;
+  if(input.brake){const b=4*dt;c.v=Math.abs(c.v)<=b?0:c.v-Math.sign(c.v)*b;}
+  else{const target=input.gas?dir*1.0:0;const a=input.gas?1.0:2.0;const dv=target-c.v;c.v+=Math.abs(dv)<=a*dt?dv:Math.sign(dv)*a*dt;}
+  const steps=Math.max(1,Math.ceil(Math.abs(c.v)*dt/0.02));const h=dt/steps;
+  for(let i=0;i<steps;i++){c.x+=c.v*Math.cos(c.th)*h;c.y+=c.v*Math.sin(c.th)*h;c.th+=c.v/L*Math.tan(c.d)*h;
+    for(const o of P.obs)if(hitRect(c,o))return fail(o);}
+  // steg
+  const m=metrics(),st=P.steps[P.step];
+  if(st.check(m)){P.hold+=dt;if(P.hold>0.35){P.hold=0;P.step++;event('good','Steg '+P.step+' klart',st.title,true);if(P.step>=P.steps.length)return finish(m);}}else P.hold=0;
+  const w=st.warn?st.warn(m):null;
+  if(w&&w!==P.lastWarn){P.warnT+=dt;if(P.warnT>0.6){P.lastWarn=w;P.warns++;P.warnT=0;event('fault','Påminnelse',w,true);}}else if(!w){P.warnT=0;if(P.lastWarn&&!w)P.lastWarn=null;}
+  if(Math.floor(P.t*2)!==Math.floor((P.t-dt)*2))updateStats();
+}
+function fail(o){
+  G.phase='end';input.gas=input.brake=input.steerL=input.steerR=false;P.car.v=0;
+  const step=P.step,ficka=P.type==='ficka';let what,tip;
+  if(ficka){what=o.name==='A'?'Du tog i den blå bilen framför.':o.name==='B'?'Du tog i bilen bakom.':'Du körde upp på trottoarkanten.';
+    tip=o.name==='kant'?(step<=6?'Du backade för långt i 45° innan du vred åt vänster. Stanna när mätaren i steg 7 visar 0.':'Räta upp när bilen är rak (steg 9) och backa inte vidare med vänster rattutslag.')
+      :o.name==='A'?'Kontrollera starten: bakhjulen vid den gula markeringen och 0,5–1 m sidavstånd. Vrid fullt höger innan du backar.'
+      :'Bakvagnen gick för långt in. Stanna vid 45° i steg 5 och backa bara den korta biten i steg 7.';}
+  else{what=o.name==='grannbilen'?'Du tog i en grannbil.':o.name==='motsida'?'Fronten tog i kanten på andra sidan körbanan.':'Du backade över rutans bakkant.';
+    tip=o.name==='grannbilen'?'Kontrollera steg 1: bakhjulen vid den gula linjen och bilen mitt i körbanan. Vrid fullt höger innan du backar.':o.name==='bakkant'?'Stanna när mätaren i steg 7 visar 0.':'Håll dig mitt i körbanan i steg 1.';}
+  event('fault','Krock',what,true);
+  showOverlay(`<div class="card"><h2>Stopp</h2><p>${what}</p><p>${tip}</p><div class="btns"><button class="btn" data-act="retry" type="button">Försök igen</button></div></div>`);
+}
+function finish(m){
+  G.phase='end';input.gas=input.brake=input.steerL=input.steerR=false;
+  let rows,ok;
+  if(P.type==='ficka'){ok=m.curb<=0.45&&Math.abs(m.thd)<4;rows=[[fmt(m.curb*100,0)+' cm','till kanten'],[fmt(Math.abs(m.thd),0)+'°','vinkel'],[fmtTime(P.t),'tid'],[P.warns,'påminnelser']];}
+  else{ok=Math.abs(m.off)<0.35&&Math.abs(m.thd-90)<4;rows=[[fmt(Math.abs(m.off)*100,0)+' cm','från mitten'],[fmt(Math.abs(m.thd-90),0)+'°','snett'],[fmtTime(P.t),'tid'],[P.warns,'påminnelser']];}
+  const nextMode=P.type==='ficka'?'back':'ficka',nextName=P.type==='ficka'?'Backparkering':'Fickparkering';
+  event(ok?'good':'fault','Parkering klar',ok?'Godkänd':'Kan bli bättre',true);
+  showOverlay(`<div class="card"><h2>Parkerad</h2><span class="verdict ${ok?'ok':'no'}">${ok?'Bra parkering':'Kan bli bättre'}</span>
+  <div class="sumrow">${rows.map(r=>`<div><b>${r[0]}</b><span>${r[1]}</span></div>`).join('')}</div>
+  <p>${ok?'Upprepa metoden några gånger tills den sitter.':P.type==='ficka'?'Sikta på högst ca 30 cm till kanten och raka hjul. Avståndet till kanten avgörs i steg 7.':'Sikta på mitten av rutan. Sidoläget avgörs av var du stannar i steg 1.'}</p>
+  <div class="btns"><button class="btn" data-act="retry" type="button">Kör igen</button><button class="btn ghost" data-act="next" data-mode="${nextMode}" type="button">${nextName}</button></div></div>`);
+}
+function startScreen(){
+  const ficka=P.type==='ficka';
+  showOverlay(`<div class="card"><h2>${ficka?'Fickparkering':'Backparkering'}</h2><p>${ficka?'Parkera i luckan bakom den blå bilen, längs trottoarkanten.':'Backa in i den gröna rutan.'} Gör ett steg i taget. Det aktuella steget och en mätare visas under bilden.</p>
+  <ol>${P.steps.map(s=>`<li>${s.title}</li>`).join('')}</ol>
+  <dl class="keys"><dt><kbd>↑</kbd> <kbd>↓</kbd></dt><dd>Gas och broms. Gas rullar åt det håll växeln står i.</dd><dt><kbd>←</kbd> <kbd>→</kbd></dt><dd>Håll inne för att vrida ratten</dd><dt><kbd>X</kbd></dt><dd>Räta upp ratten</dd><dt><kbd>G</kbd></dt><dd>Växla mellan D (framåt) och R (back)</dd><dt><kbd>Q</kbd> <kbd>E</kbd></dt><dd>Blinkers</dd></dl>
+  <button class="btn" data-act="start" type="button">Starta</button></div>`);
+}
+/* ritning ovanifrån */
+let view={sc:20,ox:0,oy:0};
+function setView(){
+  const ficka=P.type==='ficka';const vx0=ficka?-16:-14,vx1=ficka?8.5:10,vy0=ficka?-3:-6.5,vy1=ficka?8.5:8.8;
+  const vw=vx1-vx0,vh=vy1-vy0;let sc=Math.min(W/vw,H/vh);let cxw=(vx0+vx1)/2;
+  if(W/H<1.2){sc=Math.min(W/13,H/vh);const half=W/2/sc;const tgt=P.car.x+(ficka?0.5:1);cxw=Math.max(vx0+half,Math.min(vx1-half,tgt));}
+  view.sc=sc;view.ox=W/2-cxw*sc;view.oy=H/2+((vy0+vy1)/2)*sc;
+}
+const SX=x=>view.ox+x*view.sc,SY=y=>view.oy-y*view.sc;
+function wrect(x0,y0,x1,y1,col){ctx.fillStyle=col;ctx.fillRect(SX(x0),SY(y1),(x1-x0)*view.sc,(y1-y0)*view.sc);}
+function wline(x0,y0,x1,y1,col,w,dash){ctx.strokeStyle=col;ctx.lineWidth=Math.max(1,w*view.sc);ctx.setLineDash(dash?dash.map(d=>d*view.sc):[]);ctx.beginPath();ctx.moveTo(SX(x0),SY(y0));ctx.lineTo(SX(x1),SY(y1));ctx.stroke();ctx.setLineDash([]);}
+function rrect(x,y,w,h,r){r=Math.min(r,w/2,h/2);ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();}
+function topCar(c,col,opt={}){
+  ctx.save();ctx.translate(SX(c.x),SY(c.y));ctx.rotate(-c.th);ctx.scale(view.sc,-view.sc);
+  if(opt.ghost){ctx.setLineDash([0.3,0.2]);ctx.lineWidth=0.08;ctx.strokeStyle=opt.ghost;rrect(-OR,-HW,L+OF+OR,2*HW,0.35);ctx.stroke();ctx.setLineDash([]);ctx.restore();return;}
+  ctx.fillStyle='rgba(0,0,0,.25)';rrect(-OR+0.08,-HW-0.1,L+OF+OR,2*HW,0.35);ctx.fill();
+  const wh=(x,y,a)=>{ctx.save();ctx.translate(x,y);ctx.rotate(a);ctx.fillStyle='#151515';ctx.fillRect(-0.34,-0.12,0.68,0.24);ctx.restore();};
+  ctx.fillStyle=col;rrect(-OR,-HW,L+OF+OR,2*HW,0.35);ctx.fill();
+  ctx.fillStyle=shade(col,0.12);rrect(-0.15,-0.72,2.3,1.44,0.25);ctx.fill();
+  ctx.fillStyle='#1d2833';ctx.beginPath();ctx.moveTo(2.15,-0.72);ctx.lineTo(2.75,-0.8);ctx.lineTo(2.75,0.8);ctx.lineTo(2.15,0.72);ctx.closePath();ctx.fill();
+  ctx.beginPath();ctx.moveTo(-0.15,-0.72);ctx.lineTo(-0.55,-0.76);ctx.lineTo(-0.55,0.76);ctx.lineTo(-0.15,0.72);ctx.closePath();ctx.fill();
+  ctx.fillStyle=shade(col,-0.25);ctx.fillRect(2.05,0.9,0.22,0.16);ctx.fillRect(2.05,-1.06,0.22,0.16);
+  if(opt.wheels){wh(0,0.78,0);wh(0,-0.78,0);wh(L,0.78,c.d);wh(L,-0.78,c.d);}
+  ctx.fillStyle='#fff6cf';ctx.fillRect(L+OF-0.1,0.45,0.1,0.32);ctx.fillRect(L+OF-0.1,-0.77,0.1,0.32);
+  ctx.fillStyle=opt.brake?'#ff2a2a':'#a3141b';ctx.fillRect(-OR,0.45,0.1,0.35);ctx.fillRect(-OR,-0.8,0.1,0.35);
+  if(opt.rev){ctx.fillStyle='#ffffff';ctx.fillRect(-OR,0.25,0.1,0.18);ctx.fillRect(-OR,-0.43,0.1,0.18);}
+  if(opt.blink){ctx.fillStyle='#ffb21a';const y=opt.blink<0?0.62:-0.92;ctx.fillRect(L+OF-0.18,y,0.2,0.3);ctx.fillRect(-OR-0.02,y,0.2,0.3);ctx.fillStyle='rgba(255,178,26,.35)';ctx.beginPath();ctx.arc(L+OF,y+0.15,0.45,0,Math.PI*2);ctx.arc(-OR,y+0.15,0.45,0,Math.PI*2);ctx.fill();}
+  ctx.restore();
+}
+function label(x,y,txt,col,bg){ctx.font=`600 ${Math.max(11,Math.min(15,view.sc*0.6))}px "Barlow Condensed",Arial,sans-serif`;const w=ctx.measureText(txt).width+10,h=Math.max(16,Math.min(21,view.sc*0.8));
+  ctx.fillStyle=bg||'rgba(12,16,14,.78)';rrect(SX(x)-w/2,SY(y)-h/2,w,h,4);ctx.fill();ctx.fillStyle=col||'#fff';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(txt,SX(x),SY(y)+0.5);}
+function pathPreview(){
+  const c={...P.car},dir=P.gear==='D'?1:-1;const pts=[];
+  for(let i=0;i<=30;i++){pts.push([c.x,c.y]);const ds=0.15*dir;c.x+=ds*Math.cos(c.th);c.y+=ds*Math.sin(c.th);c.th+=ds/L*Math.tan(c.d);}
+  ctx.strokeStyle='rgba(255,222,80,.9)';ctx.lineWidth=2;ctx.setLineDash([3,5]);ctx.beginPath();pts.forEach((p,i)=>i?ctx.lineTo(SX(p[0]),SY(p[1])):ctx.moveTo(SX(p[0]),SY(p[1])));ctx.stroke();ctx.setLineDash([]);
+}
+function render(){
+  setView();const ficka=P.type==='ficka',c=P.car;
+  ctx.fillStyle='#55595f';ctx.fillRect(0,0,W,H);
+  if(ficka){
+    wrect(-60,-10,60,0,'#c9c5ba');for(let x=-60;x<60;x+=1.2)wline(x,-10,x,-0.2,'rgba(0,0,0,.08)',0.03);
+    wrect(-60,-0.2,60,0,'#e2ded4');
+    for(let x=-60;x<60;x+=12)wline(x,6.4,x+3,6.4,'#efefe9',0.12);
+    wrect(-60,9.4,60,30,'#c9c5ba');wrect(-60,9.4,60,9.6,'#e2ded4');
+  }else{
+    wrect(-60,-30,60,-BAY.d-0.15,'#6f9a4f');wrect(-60,-BAY.d-0.15,60,-BAY.d,'#e2ded4');
+    for(let k=-4;k<=4;k++)wline(k*BAY.w+BAY.w/2,0,k*BAY.w+BAY.w/2,-BAY.d,'#efefe9',0.12);
+    wrect(-60,BAY.aisle,60,30,'#c9c5ba');wrect(-60,BAY.aisle,60,BAY.aisle+0.2,'#e2ded4');
+    if(guides){ctx.fillStyle='rgba(79,200,120,.18)';ctx.fillRect(SX(-1.19),SY(-0.05),2.38*view.sc,(BAY.d-0.1)*view.sc);
+      ctx.strokeStyle='rgba(79,200,120,.9)';ctx.lineWidth=2;ctx.setLineDash([6,5]);ctx.strokeRect(SX(-1.19),SY(-0.05),2.38*view.sc,(BAY.d-0.1)*view.sc);ctx.setLineDash([]);}
+  }
+  for(const o of P.obs){if(o.hidden)continue;const isCar=o.x1-o.x0>3;const car=isCar?{x:o.x0+OR,y:(o.y0+o.y1)/2,th:0,d:0}:{x:(o.x0+o.x1)/2,y:o.y0+OR,th:Math.PI/2,d:0};topCar(car,o.col,{});}
+  if(ficka)label(2.25,1.1,'Blå bil','#fff','rgba(20,40,80,.0)');
+  if(guides){
+    if(ficka){
+      if(P.step===0){wline(0,2.0,0,5.2,'#ffd84a',0.12);label(0,5.6,'Bakhjulen hit','#111','#ffd84a');topCar({x:0,y:2.0+FIX.lat+HW,th:0,d:0},'',{ghost:'rgba(255,216,74,.9)'});}
+      if(P.step>=1&&P.step<=9){ctx.strokeStyle='rgba(79,200,120,.9)';ctx.lineWidth=2;ctx.setLineDash([6,5]);ctx.strokeRect(SX(-FIX.gap+0.2),SY(2.0),(FIX.gap-0.4)*view.sc,1.85*view.sc);ctx.setLineDash([]);}
+    }else{
+      wline(BAY.cue,0,BAY.cue,-BAY.d,'#ffd84a',0.14);if(P.step===0){wline(BAY.cue,0,BAY.cue,4.6,'#ffd84a',0.08,[0.4,0.3]);label(BAY.cue,5.2,'Bakhjulen hit','#111','#ffd84a');topCar({x:BAY.cue,y:BAY.y0,th:0,d:0},'',{ghost:'rgba(255,216,74,.9)'});}
+    }
+    pathPreview();
+  }
+  const blinkOn=P.blink&&(Math.floor((G.t-P.blinkSince)*2.6)%2===0);
+  topCar(c,'#2f6db5',{wheels:true,brake:input.brake||(Math.abs(c.v)<0.02&&!input.gas),rev:P.gear==='R',blink:blinkOn?P.blink:0});
+  const m=metrics();
+  if(ficka&&P.step>=6){label(c.x+1.35*Math.cos(c.th),Math.max(-1.4,m.curb/2-0.9),`${fmt(Math.max(0,m.curb)*100,0)} cm till kanten`);}
+  if(!ficka&&P.step>=6){label(c.x,-BAY.d-0.9,`${fmt(Math.max(0,m.back)*100,0)} cm till bakkanten`);}
+  // HUD
+  $('gD').classList.toggle('on',P.gear==='D');$('gR').classList.toggle('on',P.gear==='R');
+  $('wheelG').setAttribute('transform',`rotate(${(-c.d/MAXD*540).toFixed(1)})`);
+  const df=c.d/MAXD;$('wheelTxt').textContent=Math.abs(df)<0.04?'Rakt':Math.abs(df)>0.97?(df>0?'Fullt vänster':'Fullt höger'):(df>0?'Vänster':'Höger')+' '+Math.round(Math.abs(df)*100)+' %';
+  $('wheelSub').textContent=Math.abs(df)<0.04?'Hjulen raka':`Rattvarv ${fmt(Math.abs(df)*1.5)} av 1,5`;
+  $('angTxt').textContent=`Vinkel ${Math.round(Math.abs(m.thd))}°`;
+  $('pbl').classList.toggle('lit',!!(blinkOn&&P.blink<0));$('pbr').classList.toggle('lit',!!(blinkOn&&P.blink>0));
+  renderCard(m);
+}
+function renderCard(m){
+  const steps=P.steps;
+  if(G.phase==='ready'){setCard(`Metod · ${P.type==='ficka'?'Fickparkering':'Backparkering'}`,'Tryck Starta',`${steps.length} steg. Gör ett i taget.`,null,null,'');renderMethod(steps,-1,0);return;}
+  const i=Math.min(P.step,steps.length-1),st=steps[i];
+  setCard(`Steg ${i+1} av ${steps.length}`,st.title,st.text,st.meter?st.meter(m):null,st.warn?st.warn(m):null,'');
+  renderMethod(steps,P.step>=steps.length?-1:i,P.step);
+}
+return {reset,update,render,startScreen,toggleBlink,toggleGear,center,metrics,get P(){return P;},R,MAXD,FSTEPS,BSTEPS,corners};
+})();
+
+/* ================= Loop ================= */
+let last=performance.now();
+function frame(now){const dt=Math.min(0.05,(now-last)/1000);last=now;
+  if(G.phase==='run'){G.t+=dt;if(G.mode==='ot')OT.update(dt);else PK.update(dt);}
+  if(G.mode==='ot')OT.render();else PK.render();requestAnimationFrame(frame);}
+window.__sim={G,OT,PK,input,switchMode,start};
+const m0=store.get('omk-mode','ot');switchMode(['ot','ficka','back'].includes(m0)?m0:'ot');
+requestAnimationFrame(frame);
+})();
+</script>
