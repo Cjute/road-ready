@@ -71,7 +71,7 @@ function update(g: Game, dt: number, k: Keys) {
     const colors = ["#dc2626", "#7c3aed", "#0f172a", "#e5e7eb", "#0891b2"];
     g.vehicles.push({
       id: g.nextId++, kind: "oncoming", x: LEFT_X, y: PLAYER_Y - rand(300, 700) * PX,
-      v: rand(70, 90), w: 46, l: 80, color: colors[Math.floor(Math.random() * colors.length)],
+      v: rand(70, 90), w: 46, l: 80, color: colors[Math.floor(Math.random() * colors.length)]!,
     });
     g.oncomingTimer = rand(4, 10);
   }
@@ -267,12 +267,12 @@ export default function Index() {
       ArrowLeft: "left", KeyA: "left", ArrowRight: "right", KeyD: "right",
     };
     const down = (e: KeyboardEvent) => {
-      if (map[e.code]) { e.preventDefault(); keys.current[map[e.code]] = true; }
+      if (map[e.code]) { e.preventDefault(); keys.current[map[e.code]!] = true; }
       if (e.code === "KeyQ") toggleBlinker("left");
       if (e.code === "KeyE") toggleBlinker("right");
       if ((e.code === "Space" || e.code === "Enter") && phaseRef.current !== "running") { e.preventDefault(); start(); }
     };
-    const up = (e: KeyboardEvent) => { if (map[e.code]) keys.current[map[e.code]] = false; };
+    const up = (e: KeyboardEvent) => { if (map[e.code]) keys.current[map[e.code]!] = false; };
     window.addEventListener("keydown", down);
     window.addEventListener("keyup", up);
     return () => { window.removeEventListener("keydown", down); window.removeEventListener("keyup", up); };
