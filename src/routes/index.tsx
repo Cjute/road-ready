@@ -1,17 +1,26 @@
 import { createFileRoute } from "@tanstack/react-router";
-import DrivingSim from "@/components/DrivingSim";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Körsimulator – öva omkörning" },
-      { name: "description", content: "Öva säker omkörning: avstånd, blinkers, mötande trafik och heldragen linje." },
-      { property: "og:title", content: "Körsimulator – öva omkörning" },
-      { property: "og:description", content: "Öva säker omkörning i webbläsaren." },
+      { title: "Omkörningsövning – öva omkörning och parkering" },
+      { name: "description", content: "Öva säker omkörning, fickparkering och backning i webbläsaren." },
+      { property: "og:title", content: "Omkörningsövning" },
+      { property: "og:description", content: "Öva omkörning, fickparkering och backning i webbläsaren." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
-  ssr: false,
-  component: DrivingSim,
+  component: Home,
 });
+
+function Home() {
+  return (
+    <iframe
+      src="/omkorning.html"
+      title="Omkörningsövning"
+      className="fixed inset-0 h-screen w-screen border-0"
+      allow="fullscreen"
+    />
+  );
+}
