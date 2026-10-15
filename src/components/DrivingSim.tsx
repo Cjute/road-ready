@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 
 /* =========================================================
-   Övningskörning inför körkortet – slumpade lektioner
+   Övningskörning inför körkortet – slumpade lektioner och scenarier
    ========================================================= */
 
 type V2 = [number, number];
@@ -12,6 +12,8 @@ type Control = "none" | "yield" | "stop" | "main" | "light" | "round" | "exit" |
 type SignId =
   | "yield" | "stop" | "main" | "mainEnd" | "crosswalk" | "children" | "railWarn" | "railCross"
   | "noParking" | "noStopping" | "lightWarn" | "roundabout" | "speed30" | "speed40" | "speed50";
+type Task = "back" | "front" | "parallel";
+type CondId = "klart" | "mulet" | "dimma" | "skymning";
 
 type Item =
   | { at: number; kind: "speed"; kmh: 30 | 40 | 50; quiz?: string }
@@ -28,6 +30,35 @@ interface Leg {
 }
 
 interface Quiz { sign?: SignId; q: string; options: string[]; correct: number; explain: string }
+
+/* ---------------- Lektioner och förhållanden ---------------- */
+const CONDITIONS: Record<CondId, { name: string; sky: number; near: number; far: number; sun: number; hemi: number; intro: string }> = {
+  klart: { name: "Klart väder", sky: 0xc9dbe8, near: 40, far: 650, sun: 1.6, hemi: 1.0, intro: "Det är klart väder idag." },
+  mulet: { name: "Mulet", sky: 0xb4bcc4, near: 30, far: 450, sun: 0.7, hemi: 0.9, intro: "Det är mulet idag." },
+  dimma: { name: "Dimma", sky: 0xc3c7cb, near: 5, far: 110, sun: 0.4, hemi: 0.85, intro: "Det är dimmigt idag och sikten är dålig." },
+  skymning: { name: "Skymning", sky: 0x5b6378, near: 20, far: 260, sun: 0.35, hemi: 0.5, intro: "Det börjar skymma." },
+};
+
+interface Lesson {
+  id: string; title: string; desc: string;
+  pool: Control[]; must: Control[]; count: [number, number];
+  feats: string[]; featCount: [number, number];
+  cyc: number; ped: number; rail: "maybe" | "force" | "never";
+  tasks: Task[]; maneuvers: number; help: boolean; quiz: boolean; conds: CondId[];
+}
+
+const ALL_C: Control[] = ["none", "yield", "stop", "main", "light", "round"];
+const LESSONS: Lesson[] = [
+  { id: "mixed", title: "Blandad stadskörning", desc: "Lite av allt: korsningar, skyltar, gående och parkering.", pool: ALL_C, must: ALL_C, count: [7, 9], feats: ["crosswalk", "school", "sign", "rail", "limit", "quiz"], featCount: [1, 3], cyc: 0.6, ped: 0.8, rail: "maybe", tasks: ["back", "front", "parallel"], maneuvers: 1, help: true, quiz: true, conds: ["klart", "klart", "mulet", "skymning"] },
+  { id: "junctions", title: "Korsningar och företräde", desc: "Högerregeln, väjningsplikt, stopplikt och huvudled i många varianter.", pool: ["none", "none", "yield", "stop", "main", "yield", "stop", "none"], must: ["none", "yield", "stop", "main"], count: [8, 10], feats: ["crosswalk", "sign", "quiz"], featCount: [0, 2], cyc: 0.5, ped: 0.7, rail: "never", tasks: ["front"], maneuvers: 1, help: true, quiz: true, conds: ["klart", "mulet"] },
+  { id: "round", title: "Cirkulationsplatser", desc: "Infart, val av utfart och blinkers i cirkulationsplatser.", pool: ["round", "round", "round", "yield", "none"], must: ["round", "round", "round"], count: [6, 8], feats: ["crosswalk", "sign", "quiz"], featCount: [0, 2], cyc: 0.4, ped: 0.7, rail: "never", tasks: ["back"], maneuvers: 1, help: true, quiz: true, conds: ["klart", "mulet"] },
+  { id: "vulnerable", title: "Gående och cyklister", desc: "Övergångsställen, skolområden och cyklister i döda vinkeln.", pool: ["none", "yield", "main", "light", "round"], must: ["none", "main"], count: [7, 9], feats: ["crosswalk", "crosswalk", "school", "school", "sign"], featCount: [2, 3], cyc: 0.95, ped: 1, rail: "never", tasks: ["parallel"], maneuvers: 1, help: true, quiz: true, conds: ["klart", "mulet", "skymning"] },
+  { id: "signs", title: "Vägmärken och hastighet", desc: "Många skyltar och hastighetsbyten. Ingen säger vad som gäller, du måste vara uppmärksam.", pool: ALL_C, must: ["main", "yield", "stop"], count: [7, 9], feats: ["limit", "limit", "school", "sign", "sign", "rail", "quiz"], featCount: [2, 3], cyc: 0.4, ped: 0.6, rail: "maybe", tasks: ["front", "back"], maneuvers: 1, help: false, quiz: true, conds: ["klart", "mulet"] },
+  { id: "signals", title: "Trafiksignaler och järnväg", desc: "Gult och rött ljus, vänstersväng vid signal och järnvägskorsning med bommar.", pool: ["light", "light", "light", "main", "yield"], must: ["light", "light"], count: [6, 8], feats: ["crosswalk", "sign", "quiz"], featCount: [0, 2], cyc: 0.4, ped: 0.6, rail: "force", tasks: ["back"], maneuvers: 1, help: true, quiz: true, conds: ["klart", "skymning"] },
+  { id: "weather", title: "Svåra förhållanden", desc: "Dimma eller skymning. Anpassa farten efter sikten.", pool: ALL_C, must: ["none", "round", "light"], count: [7, 9], feats: ["crosswalk", "school", "sign", "limit"], featCount: [1, 2], cyc: 0.6, ped: 0.9, rail: "maybe", tasks: ["front", "parallel"], maneuvers: 1, help: true, quiz: false, conds: ["dimma", "skymning"] },
+  { id: "maneuver", title: "Manövrering och parkering", desc: "Kort körning och sedan tre olika parkeringsövningar.", pool: ["none", "yield"], must: [], count: [2, 3], feats: ["crosswalk"], featCount: [0, 1], cyc: 0.3, ped: 0.6, rail: "never", tasks: ["back", "front", "parallel"], maneuvers: 3, help: true, quiz: false, conds: ["klart", "mulet"] },
+  { id: "exam", title: "Provkörning", desc: "Som ett riktigt körprov: ingen regelhjälp, inga frågor och allt kan hända.", pool: ALL_C, must: ALL_C, count: [8, 10], feats: ["crosswalk", "school", "sign", "rail", "limit"], featCount: [1, 2], cyc: 0.6, ped: 0.8, rail: "maybe", tasks: ["back", "front", "parallel"], maneuvers: 1, help: false, quiz: false, conds: ["klart", "mulet", "dimma", "skymning"] },
+];
 
 /* ---------------- Teorifrågor ---------------- */
 const QUIZ: Record<string, Quiz> = {
@@ -67,6 +98,7 @@ const QUIZ: Record<string, Quiz> = {
   g_reverse: { q: "Vad ska du göra när du backar?", options: ["Titta bakåt, köra långsamt och vara beredd att stanna", "Bara titta i backspegeln", "Tuta hela tiden", "Ha varningsblinkers på"], correct: 0, explain: "Du ansvarar för att backningen sker säkert. Vrid på huvudet och titta bakåt." },
   g_child: { q: "Hur ska ett barn som är kortare än 135 cm sitta i bilen?", options: ["I en bilbarnstol eller på en bälteskudde som passar barnets storlek", "Med vanligt bälte i framsätet", "I knät på en vuxen", "Utan bälte i baksätet"], correct: 0, explain: "Barn kortare än 135 cm ska använda särskild skyddsanordning anpassad efter barnets längd och vikt." },
   g_emergency: { q: "Ett utryckningsfordon närmar sig med blåljus och siren. Vad ska du göra?", options: ["Ge fri väg, kör åt sidan och stanna om det behövs", "Öka farten", "Fortsätta som vanligt", "Stanna mitt i körfältet"], correct: 0, explain: "Du ska ge fri väg åt utryckningsfordon." },
+  g_fog: { q: "Det är tät dimma. Vad gäller för din hastighet?", options: ["Du ska anpassa farten efter sikten, även om skylten tillåter mer", "Du får alltid köra i hastighetsgränsen", "Du ska köra fortare för att komma ur dimman", "Hastighetsgränsen gäller inte i dimma"], correct: 0, explain: "Hastighetsgränsen är den högsta tillåtna farten. Du måste alltid anpassa farten efter väder, sikt och trafik." },
 };
 const GENERAL_IDS = Object.keys(QUIZ).filter((k) => k.startsWith("g_"));
 
@@ -111,27 +143,30 @@ const angDiff = (a: number, b: number) => { let d = a - b; while (d > Math.PI) d
 const turnWord = (t: Turn) => (t === "right" ? "höger" : "vänster");
 
 /* ---------------- Slumpad lektion ---------------- */
-function generateCourse(): Leg[] {
+function generateCourse(lesson: Lesson): Leg[] {
   const legs: Leg[] = [];
   const side = (): 1 | -1 => (maybe(0.5) ? 1 : -1);
   const firstTurn: Turn = maybe(0.5) ? "left" : "right";
   legs.push({ len: 30, turn: firstTurn, control: "exit", cross: maybe(0.5) ? "left" : "right", items: [{ at: 21, kind: "walker", from: side() }], quizAfter: maybe(0.7) ? "utfart" : undefined });
   let heading: V2 = firstTurn === "right" ? [1, 0] : [-1, 0];
-  const count = randInt(7, 9);
-  const bag = shuffle<Control>(["none", "yield", "stop", "main", "light", "round"]);
-  while (bag.length < count) bag.push(pick<Control>(["none", "yield", "stop", "main", "round", "light"]));
+  const count = randInt(lesson.count[0], lesson.count[1]);
+  const fill: Control[] = [];
+  while (fill.length + lesson.must.length < count) fill.push(pick(lesson.pool));
+  const bag = shuffle<Control>([...lesson.must, ...fill]);
   const general = shuffle(GENERAL_IDS);
   let gq = 0;
   let prevMainStraight = false;
   let railUsed = false;
 
-  for (let k = 0; k < count; k++) {
+  for (let k = 0; k < bag.length; k++) {
     const control = bag[k];
     const isN = heading[1] === -1;
-    const len = isN ? randInt(230, 310) : randInt(170, 250);
+    let len = isN ? randInt(230, 310) : randInt(170, 250);
     const turns: Turn[] = isN ? ["straight", "left", "right"] : heading[0] === 1 ? ["straight", "left"] : ["straight", "right"];
     let turn = pick(turns);
     if (turn === "straight" && maybe(0.4)) turn = pick(turns);
+    if (lesson.rail === "force" && !railUsed && !isN) turn = heading[0] === 1 ? "left" : "right";
+    if (lesson.rail === "force" && !railUsed && isN) len = Math.max(len, 300);
     const leg: Leg = { len, turn, control, items: [] };
     const used: number[] = [];
     const maxAt = len - (control === "round" ? 75 : 65);
@@ -142,9 +177,16 @@ function generateCourse(): Leg[] {
     if (control === "main" && !prevMainStraight) { leg.items.push({ at: 20, kind: "sign", sign: "main", quiz: maybe(0.6) ? "main" : undefined }); used.push(20); }
     if (control !== "main" && prevMainStraight) { leg.items.push({ at: 20, kind: "sign", sign: "mainEnd", quiz: maybe(0.6) ? "mainEnd" : undefined }); used.push(20); }
 
-    const feats = shuffle(["crosswalk", "school", "sign", "rail", "limit", "quiz"]).slice(0, randInt(1, 3));
+    if (lesson.rail === "force" && !railUsed && isN) {
+      const a = rand(140, maxAt);
+      railUsed = true;
+      leg.items.push({ at: a - 80, kind: "sign", sign: "railWarn", quiz: maybe(0.6) ? "railWarn" : undefined }, { at: a, kind: "rail", quiz: maybe(0.5) });
+      mark(a - 80, 80);
+    }
+
+    const feats = shuffle(lesson.feats).slice(0, randInt(lesson.featCount[0], lesson.featCount[1]));
     for (const f of feats) {
-      if (f === "crosswalk") { const a = findSpot(); if (a > 0) { leg.items.push({ at: a, kind: "crosswalk", from: side(), ped: maybe(0.8), quiz: maybe(0.4) ? "crosswalk" : undefined }); mark(a); } }
+      if (f === "crosswalk") { const a = findSpot(); if (a > 0) { leg.items.push({ at: a, kind: "crosswalk", from: side(), ped: maybe(lesson.ped), quiz: maybe(0.4) ? "crosswalk" : undefined }); mark(a); } }
       if (f === "school") {
         const a = findSpot(95);
         if (a > 0) {
@@ -158,11 +200,18 @@ function generateCourse(): Leg[] {
         }
       }
       if (f === "sign") { const a = findSpot(); if (a > 0) { const s: SignId = maybe(0.5) ? "noParking" : "noStopping"; leg.items.push({ at: a, kind: "sign", sign: s, quiz: maybe(0.6) ? s : undefined }); mark(a); } }
-      if (f === "rail" && isN && !railUsed && len >= 260) {
+      if (f === "rail" && lesson.rail !== "never" && isN && !railUsed && len >= 260) {
         const a = findSpot();
         if (a > 110) { railUsed = true; leg.items.push({ at: a - 80, kind: "sign", sign: "railWarn", quiz: maybe(0.6) ? "railWarn" : undefined }, { at: a, kind: "rail", quiz: maybe(0.5) }); mark(a - 80, 80); }
       }
-      if (f === "limit") { const a = findSpot(100); if (a > 0) { leg.items.push({ at: a, kind: "speed", kmh: 40, quiz: maybe(0.3) ? "speed40" : undefined }, { at: a + 100, kind: "speed", kmh: 50, quiz: maybe(0.3) ? "speed50" : undefined }); mark(a, 100); } }
+      if (f === "limit") {
+        const a = findSpot(100);
+        if (a > 0) {
+          const kmh = pick<30 | 40>([30, 40]);
+          leg.items.push({ at: a, kind: "speed", kmh, quiz: maybe(0.3) ? `speed${kmh}` : undefined }, { at: a + 100, kind: "speed", kmh: 50, quiz: maybe(0.3) ? "speed50" : undefined });
+          mark(a, 100);
+        }
+      }
       if (f === "quiz" && gq < general.length) { const a = findSpot(); if (a > 0) { leg.items.push({ at: a, kind: "quiz", quiz: general[gq++] }); mark(a); } }
     }
 
@@ -172,7 +221,7 @@ function generateCourse(): Leg[] {
     if (control === "light") { if (maybe(0.6)) leg.items.push({ at: len - 55, kind: "sign", sign: "lightWarn", quiz: maybe(0.3) ? "lightWarn" : undefined }); if (maybe(0.6)) leg.quizAfter = "yellow"; }
     if (control === "round") { leg.circ = maybe(0.8); if (maybe(0.7)) leg.quizAfter = pick(["roundExit", "roundYield", "roundabout"]); }
     if (turn === "left" && control !== "round") leg.oncoming = control === "light" || control === "main" ? true : maybe(0.5);
-    if (turn === "right" && control !== "round") leg.cyclist = maybe(0.6);
+    if (turn === "right" && control !== "round") leg.cyclist = maybe(lesson.cyc);
     if (turn !== "straight" && control !== "round" && !leg.quizAfter && maybe(0.5)) leg.quizAfter = turn === "right" ? "rightTurn" : pick(["leftTurn", "leftTurnPrep"]);
     prevMainStraight = control === "main" && turn === "straight";
     legs.push(leg);
@@ -351,8 +400,7 @@ function drawSign(id: SignId): HTMLCanvasElement {
         g.strokeStyle = "#fff"; g.lineWidth = 18; g.lineCap = "butt";
         g.beginPath(); g.arc(128, 128, 64, a, e, true); g.stroke();
         const ex = 128 + 64 * Math.cos(e), ey = 128 + 64 * Math.sin(e);
-        const tx = Math.sin(e), ty = -Math.cos(e);
-        const nx = Math.cos(e), ny = Math.sin(e);
+        const tx = Math.sin(e), ty = -Math.cos(e), nx = Math.cos(e), ny = Math.sin(e);
         poly([[ex + tx * 26, ey + ty * 26], [ex + nx * 20, ey + ny * 20], [ex - nx * 20, ey - ny * 20]], "#fff");
       }
       break;
@@ -566,7 +614,6 @@ function buildTown(group: THREE.Group, course: Leg[], C: Course) {
     if (L.control === "stop") { const p = pt(sl - 2.5); placeSign(group, "stop", p[0], p[1], g.dir); }
   });
 
-  // Skyltar och övergångsställen
   course.forEach((L, i) => {
     const g = legs[i];
     const pt = (local: number) => [g.x0 + g.dir[0] * local, g.z0 + g.dir[1] * local];
@@ -590,7 +637,6 @@ function buildTown(group: THREE.Group, course: Leg[], C: Course) {
   mkGeo.computeVertexNormals();
   group.add(new THREE.Mesh(mkGeo, markMat()));
 
-  // Trafiksignaler
   const lights: Record<number, LightMats> = {};
   course.forEach((L, i) => {
     if (L.control !== "light") return;
@@ -613,7 +659,6 @@ function buildTown(group: THREE.Group, course: Leg[], C: Course) {
     lights[i] = { red, yellow, green };
   });
 
-  // Järnvägskorsning
   let rail: RailParts | null = null;
   const railRects: Rect[] = [];
   course.forEach((L, i) => {
@@ -694,7 +739,6 @@ function buildTown(group: THREE.Group, course: Leg[], C: Course) {
     }
   });
 
-  // Hus, lyktstolpar, träd
   const blockRects = [...roadRects, ...boxes, ...railRects];
   const winC = document.createElement("canvas");
   winC.width = winC.height = 64;
@@ -753,7 +797,6 @@ function buildTown(group: THREE.Group, course: Leg[], C: Course) {
 
 /* ---------------- Parkering och manövrering ---------------- */
 type OBB = { x: number; z: number; yaw: number; hx: number; hz: number; kind: "car" | "curb" };
-type Task = "back" | "front" | "parallel";
 interface Lot {
   task: Task;
   start: { x: number; z: number; yaw: number };
@@ -874,7 +917,7 @@ type MsgKind = "info" | "good" | "bad" | "eco";
 type Phase = "start" | "running" | "crashed" | "finished";
 type Keys = { up: boolean; down: boolean; left: boolean; right: boolean; lookL: boolean; lookR: boolean; back: boolean };
 type Panel = { title: string; rule: string; checks: { t: string; ok: boolean | null }[]; extra: string[] } | null;
-type ShownQuiz = Quiz & { order?: number[] };
+type Summary = { lesson: string; cond: string; reason: string; faults: string[]; eco: string[]; right: number; total: number; maneuver: string };
 
 interface Car {
   path: LanePath; s: number; v: number; vWant: number; len: number;
@@ -887,7 +930,6 @@ export default function Index() {
   const needleRef = useRef<SVGGElement>(null);
   const speedRef = useRef<SVGTextElement>(null);
   const wheelRef = useRef<SVGGElement>(null);
-  const limitRef = useRef<HTMLSpanElement>(null);
   const gearRef = useRef<HTMLSpanElement>(null);
   const blinkLRef = useRef<SVGSVGElement>(null);
   const blinkRRef = useRef<SVGSVGElement>(null);
@@ -900,16 +942,18 @@ export default function Index() {
   const frameRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<HTMLCanvasElement>(null);
   const keys = useRef<Keys>({ up: false, down: false, left: false, right: false, lookL: false, lookR: false, back: false });
-  const api = useRef<{ start: () => void; blink: (d: "left" | "right") => void; resume: (ok: boolean) => void; gear: () => void; quit: () => void } | null>(null);
+  const api = useRef<{ start: (id: string) => void; blink: (d: "left" | "right") => void; resume: (ok: boolean) => void; gear: () => void; quit: () => void } | null>(null);
   const settings = useRef({ voice: true, quiz: true, help: true });
 
   const [phase, setPhase] = useState<Phase>("start");
   const [mode, setMode] = useState<"town" | "maneuver">("town");
   const [msg, setMsg] = useState<{ text: string; kind: MsgKind; id: number } | null>(null);
-  const [quiz, setQuiz] = useState<ShownQuiz | null>(null);
+  const [quiz, setQuiz] = useState<Quiz | null>(null);
   const [quizPick, setQuizPick] = useState<number | null>(null);
   const [panel, setPanel] = useState<Panel>(null);
-  const [summary, setSummary] = useState<{ reason: string; faults: string[]; eco: string[]; right: number; total: number; maneuver: string } | null>(null);
+  const [summary, setSummary] = useState<Summary | null>(null);
+  const [lessonId, setLessonId] = useState("mixed");
+  const [running, setRunning] = useState<{ title: string; cond: string } | null>(null);
   const [voice, setVoice] = useState(true);
   const [quizOn, setQuizOn] = useState(true);
   const [help, setHelp] = useState(true);
@@ -943,8 +987,10 @@ export default function Index() {
     const scene = new THREE.Scene();
     const sky = new THREE.Color(0xc9dbe8);
     scene.background = sky;
-    scene.fog = new THREE.Fog(sky, 40, 650);
-    scene.add(new THREE.HemisphereLight(0xe6f0ff, 0x4d5a33, 1.0));
+    const fog = new THREE.Fog(sky, 40, 650);
+    scene.fog = fog;
+    const hemi = new THREE.HemisphereLight(0xe6f0ff, 0x4d5a33, 1.0);
+    scene.add(hemi);
     const sun = new THREE.DirectionalLight(0xfff1dc, 1.6);
     sun.position.set(300, 400, 200);
     scene.add(sun);
@@ -988,7 +1034,9 @@ export default function Index() {
     resize();
 
     /* ---------- Världen ---------- */
-    let course = generateCourse();
+    let lesson: Lesson = LESSONS[0];
+    let cond: CondId = "klart";
+    let course = generateCourse(lesson);
     let C = buildCourse(course);
     const townGroup = new THREE.Group();
     scene.add(townGroup);
@@ -996,6 +1044,15 @@ export default function Index() {
     const lotGroup = new THREE.Group();
     scene.add(lotGroup);
     let lot: Lot | null = null;
+
+    const applyCond = (c: CondId) => {
+      const k = CONDITIONS[c];
+      sky.setHex(k.sky);
+      fog.color.setHex(k.sky);
+      fog.near = k.near; fog.far = k.far;
+      sun.intensity = k.sun;
+      hemi.intensity = k.hemi;
+    };
 
     /* ---------- Status ---------- */
     type LT = { phase: "green" | "yellow" | "red"; t: number; triggered: boolean; stoppable: boolean };
@@ -1005,7 +1062,7 @@ export default function Index() {
       turnWarned: boolean; lookL: boolean; lookR: boolean; exitChecked: boolean; lt: LT;
     };
     type Ped = { S: number; cx: number; cz: number; r: V2; from: 1 | -1; offset: number; state: "wait" | "walk" | "done"; speed: number; obj: THREE.Group; legs: THREE.Mesh[]; checked: boolean };
-    type Bike = { path: LanePath; s: number; v: number; node: number; leg: number; startLocal: number; obj: THREE.Group };
+    type Bike = { path: LanePath; s: number; v: number; node: number; startLocal: number; obj: THREE.Group };
     let nodes: NodeRT[] = [];
     let cars: Car[] = [];
     let peds: Ped[] = [];
@@ -1016,12 +1073,12 @@ export default function Index() {
     let finishS = 0;
 
     const P = { s: 15, v: 0, gas: 0, brake: 0, acc: 0, prevF: 0 };
-    const M = { x: 0, z: 0, yaw: 0, v: 0, steer: 0, gear: "D" as "D" | "R", stillT: 0, blinkedRight: false, result: "" };
+    const M = { x: 0, z: 0, yaw: 0, v: 0, steer: 0, gear: "D" as "D" | "R", stillT: 0, blinkedRight: false, results: [] as string[], queue: [] as Task[] };
     const G = {
       t: 0, running: false, paused: false, mode: "town" as "town" | "maneuver",
       blinker: null as null | "left" | "right", blinkSince: 0, blinkWarned: false,
-      head: 0, yaw: 0, wheel: 0, overT: 0, faults: [] as string[], eco: [] as string[], said: new Map<string, number>(),
-      lastPhase: 0, lastLimit: 50, quizRight: 0, quizTotal: 0, lastBack: -99, accT: 0, brakeT: 0, panelT: 0, panelKey: "",
+      head: 0, yaw: 0, wheel: 0, overT: 0, fogT: 0, faults: [] as string[], eco: [] as string[], said: new Map<string, number>(),
+      lastPhase: 0, quizRight: 0, quizTotal: 0, lastBack: -99, accT: 0, brakeT: 0, panelT: 0, panelKey: "",
     };
     const RL = { active: false, done: false, t: 0, bell: 0 };
 
@@ -1114,7 +1171,7 @@ export default function Index() {
       p.add(g.nx + g.dir[0] * 70 + g.r[0] * 2.95, g.nz + g.dir[1] * 70 + g.r[1] * 2.95);
       const obj = makeCyclist();
       scene.add(obj);
-      bikes.push({ path: p, s: 0, v: 5.5, node: n.i, leg: n.i, startLocal, obj });
+      bikes.push({ path: p, s: 0, v: 5.5, node: n.i, startLocal, obj });
     };
 
     const clearDynamic = () => {
@@ -1128,7 +1185,7 @@ export default function Index() {
       disposeGroup(townGroup);
       disposeGroup(lotGroup);
       lot = null;
-      course = generateCourse();
+      course = generateCourse(lesson);
       C = buildCourse(course);
       world = buildTown(townGroup, course, C);
       const last = C.legs.length - 1;
@@ -1159,7 +1216,9 @@ export default function Index() {
         }
         if (L.quizAfter && i < last) quizzes.push({ S: C.boxOut[i] + 20, id: L.quizAfter, done: false });
       });
+      if (cond === "dimma" && quizzes.length) quizzes.push({ S: C.sOf(1, 60), id: "g_fog", done: false });
       zones.sort((a, b2) => a.S - b2.S);
+      quizzes.sort((a, b2) => a.S - b2.S);
       ambientDone = C.legs.map(() => false);
       Object.assign(P, { s: 15, v: 0, gas: 0, brake: 0, acc: 0, prevF: 15 + HALF_CAR });
       const p0 = C.path.at(P.s);
@@ -1169,46 +1228,60 @@ export default function Index() {
 
     const resetStats = () => {
       Object.assign(G, {
-        t: 0, paused: false, mode: "town", blinker: null, blinkSince: 0, blinkWarned: false, head: 0, wheel: 0, overT: 0,
-        faults: [], eco: [], said: new Map(), lastPhase: 0, lastLimit: 50, quizRight: 0, quizTotal: 0, lastBack: -99, accT: 0, brakeT: 0, panelKey: "",
+        t: 0, paused: false, mode: "town", blinker: null, blinkSince: 0, blinkWarned: false, head: 0, wheel: 0, overT: 0, fogT: 0,
+        faults: [], eco: [], said: new Map(), lastPhase: 0, quizRight: 0, quizTotal: 0, lastBack: -99, accT: 0, brakeT: 0, panelKey: "",
       });
-      M.result = "";
+      M.results = [];
+      M.queue = [];
     };
 
     const end = (reason: string, crashed: boolean) => {
       G.running = false;
-      setSummary({ reason, faults: [...G.faults], eco: [...G.eco], right: G.quizRight, total: G.quizTotal, maneuver: M.result });
+      setSummary({ lesson: lesson.title, cond: CONDITIONS[cond].name, reason, faults: [...G.faults], eco: [...G.eco], right: G.quizRight, total: G.quizTotal, maneuver: M.results.join(" ") });
       setPhase(crashed ? "crashed" : "finished");
       setPanel(null);
+      setRunning(null);
       speak(reason);
+    };
+
+    const runTask = (task: Task) => {
+      disposeGroup(lotGroup);
+      lot = buildLot(lotGroup, task);
+      Object.assign(M, { x: lot.start.x, z: lot.start.z, yaw: lot.start.yaw, v: 0, steer: 0, gear: "D", stillT: 0, blinkedRight: false });
+      G.blinker = null;
+      G.yaw = M.yaw;
+      const intro = task === "back"
+        ? "Backa in i den gröna rutan så att fronten pekar ut."
+        : task === "front"
+        ? "Kör in framåt i den gröna rutan och stanna rakt i rutan."
+        : "Fickparkera i luckan mellan bilarna, nära trottoarkanten.";
+      say(intro, "info", 0);
     };
 
     const startManeuver = () => {
       clearDynamic();
-      disposeGroup(lotGroup);
-      const task: Task = pick(["back", "front", "parallel"]);
-      lot = buildLot(lotGroup, task);
-      Object.assign(M, { x: lot.start.x, z: lot.start.z, yaw: lot.start.yaw, v: 0, steer: 0, gear: "D", stillT: 0, blinkedRight: false });
       G.mode = "maneuver";
-      G.blinker = null;
-      G.yaw = M.yaw;
       setMode("maneuver");
-      const intro = task === "back"
-        ? "Nu övar vi manövrering. Backa in i den gröna rutan så att fronten pekar ut. Titta bakåt medan du backar och håll gångfart."
-        : task === "front"
-        ? "Nu övar vi manövrering. Kör in framåt i den gröna rutan och stanna rakt i rutan."
-        : "Nu övar vi fickparkering. Blinka höger, kör fram bredvid bilen framför luckan och backa in nära trottoarkanten.";
-      say(intro, "info", 0);
+      M.queue = shuffle(lesson.tasks).slice(0, lesson.maneuvers);
+      while (M.queue.length < lesson.maneuvers) M.queue.push(pick(lesson.tasks));
+      const first = M.queue.shift()!;
+      say("Nu övar vi manövrering.", "info", 0);
+      setTimeout(() => runTask(first), 1500);
+      runTask(first);
     };
 
-    const start = () => {
+    const start = (id: string) => {
+      lesson = LESSONS.find((l) => l.id === id) ?? LESSONS[0];
+      cond = pick(lesson.conds);
+      applyCond(cond);
       resetStats();
       setupTown();
       G.running = true;
       setSummary(null); setQuiz(null); setMode("town");
+      setRunning({ title: lesson.title, cond: CONDITIONS[cond].name });
       setPhase("running");
       initAudio();
-      say("Välkommen. Vi börjar på en parkering. Kör fram till utfarten, titta åt båda hållen och släpp fram alla innan du kör ut.", "info", 0);
+      say(`Dagens lektion: ${lesson.title}. ${CONDITIONS[cond].intro} Kör ut från parkeringen när du är redo.`, "info", 0);
     };
 
     const blink = (dir: "left" | "right") => {
@@ -1225,7 +1298,7 @@ export default function Index() {
       M.gear = M.gear === "D" ? "R" : "D";
       beep(600, 0.03, 0.08);
     };
-    const quit = () => { if (G.running) { M.result = "Manövreringen avbröts."; end("Lektionen är slut.", false); } };
+    const quit = () => { if (G.running) { M.results.push("Manövreringen avbröts."); end("Lektionen är slut.", false); } };
     api.current = { start, blink, resume, gear, quit };
 
     const limitAt = (s: number) => { let k = 50; for (const z of zones) if (s >= z.S) k = z.kmh; return k; };
@@ -1260,13 +1333,16 @@ export default function Index() {
         if (!soon) { G.blinkWarned = true; say("Glöm inte att slå av blinkersen.", "bad"); }
       }
 
-      // Hastighet
+      // Hastighet – ingen säger vad som gäller, du måste läsa skyltarna själv
       const lim = limitAt(P.s);
-      if (lim !== G.lastLimit) { G.lastLimit = lim; say(`Nu gäller ${lim} kilometer i timmen.`, "info", 0); }
       G.overT = kmh > lim + 3 ? G.overT + dt : G.overT < 0 ? Math.min(0, G.overT + dt) : 0;
-      if (G.overT > 2.5) { say(`Du kör för fort. Här gäller ${lim} kilometer i timmen.`, "bad", 0); G.overT = -10; }
+      if (G.overT > 2.5) { say("Du kör för fort. Håll koll på hastighetsskyltarna.", "bad", 0); G.overT = -10; }
+      if (cond === "dimma") {
+        const tooFast = kmh > lim - 8 && kmh <= lim + 3;
+        G.fogT = tooFast ? G.fogT + dt : G.fogT < 0 ? Math.min(0, G.fogT + dt) : 0;
+        if (G.fogT > 4) { say("Du kör för fort för sikten. Anpassa farten efter förhållandena.", "bad", 0); G.fogT = -12; }
+      }
 
-      // Mötande trafik
       C.legs.forEach((g, i) => {
         if (ambientDone[i] || g.len < 200) return;
         const local = P.s - g.s0 + g.startLocal;
@@ -1307,7 +1383,6 @@ export default function Index() {
 
         if (L.control === "stop" && Sf > n.stopLine - 12 && Sf <= n.stopLine + 0.5) n.minV = Math.min(n.minV, P.v);
 
-        // Trafiksignal
         if (L.control === "light") {
           const lt = n.lt;
           const dLine = n.stopLine - Sf;
@@ -1326,7 +1401,6 @@ export default function Index() {
           if (lt.phase !== "green" && dLine > 0 && dLine < 60 && P.gas > 0.4) say("Släpp gasen i god tid när det är rött eller gult framåt.", "eco", 20);
         }
 
-        // Kontroll vid infart i korsningen
         if (!n.checked && Sf >= n.boxIn - 0.5) {
           n.checked = true;
           const needsBoth = ["none", "yield", "stop", "exit"].includes(L.control);
@@ -1382,7 +1456,7 @@ export default function Index() {
         const inBox = Sf > n.boxIn && P.s - HALF_CAR < n.boxOut;
         if (inBox && L.turn !== "straight" && !n.turnWarned) {
           const maxK = L.control === "round" ? 25 : L.turn === "right" ? 20 : 25;
-          if (kmh > maxK + 2) { n.turnWarned = true; say(`För hög fart i svängen. Håll under ${maxK} kilometer i timmen.`, "bad", 2); }
+          if (kmh > maxK + 2) { n.turnWarned = true; say("För hög fart i svängen. Sänk farten innan du svänger.", "bad", 2); }
         }
         if (L.control === "round" && !n.exitChecked && crossed(n.boxOut - 5)) {
           n.exitChecked = true;
@@ -1545,7 +1619,7 @@ export default function Index() {
         M.v = 0;
         say(hit.kind === "curb" ? "Du körde upp på trottoarkanten. Kör försiktigt och använd speglarna." : "Du nuddade en parkerad bil. Kör långsamt och titta runt dig.", "bad", 4);
       } else { M.x = nx; M.z = nz; M.yaw = nyaw; }
-      if (Math.abs(M.v) * 3.6 > 10.5) say("Håll gångfart på parkeringen, under 10 kilometer i timmen.", "bad", 10);
+      if (Math.abs(M.v) * 3.6 > 10.5) say("Håll gångfart på parkeringen.", "bad", 10);
       if (M.gear === "R" && M.v < -0.3 && G.t - G.lastBack > 4) say("Titta bakåt innan och medan du backar. Håll in mellanslag.", "bad", 12);
       P.acc = 0;
 
@@ -1573,8 +1647,10 @@ export default function Index() {
         }
         if (ok) {
           if (lot.task === "parallel" && !M.blinkedRight) say("Kom ihåg att blinka höger när du ska köra in till kanten och fickparkera.", "bad", 0);
-          M.result = lot.task === "back" ? "Backparkering klar." : lot.task === "front" ? "Framåtparkering klar." : "Fickparkering klar.";
-          end("Snyggt parkerat! Lektionen är slut.", false);
+          M.results.push(lot.task === "back" ? "Backparkering klar." : lot.task === "front" ? "Framåtparkering klar." : "Fickparkering klar.");
+          const next = M.queue.shift();
+          if (next) { say("Bra! Nu tar vi nästa övning.", "good", 0); runTask(next); }
+          else end("Snyggt parkerat! Lektionen är slut.", false);
           return;
         }
         if (reason) say(`${reason} Justera och stanna igen.`, "info", 6);
@@ -1626,8 +1702,7 @@ export default function Index() {
       for (const o of lot.obstacles) polyO(o, o.kind === "curb" ? "#8f8a80" : "#9aa3ad");
       ctx.strokeStyle = "#e5e7eb"; ctx.lineWidth = 1;
       for (const [x1, z1, x2, z2] of lot.segs) { ctx.beginPath(); ctx.moveTo(tx(x1), tz(z1)); ctx.lineTo(tx(x2), tz(z2)); ctx.stroke(); }
-      const me = { x: M.x, z: M.z, yaw: M.yaw, hx: 0.92, hz: 2.25 };
-      polyO(me, "#3b82f6");
+      polyO({ x: M.x, z: M.z, yaw: M.yaw, hx: 0.92, hz: 2.25 }, "#3b82f6");
       const fx = M.x - Math.sin(M.yaw) * 2.0, fz = M.z - Math.cos(M.yaw) * 2.0;
       ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(tx(fx), tz(fz), 3, 0, Math.PI * 2); ctx.fill();
     };
@@ -1639,11 +1714,10 @@ export default function Index() {
           const Sf = P.s + HALF_CAR;
           const kmh = P.v * 3.6;
           const extra: string[] = [];
-          const lim = limitAt(P.s);
-          extra.push(`Hastighetsgräns: ${lim} km/h`);
           const ped = peds.find((x) => x.S - Sf > 0 && x.S - Sf < 70 && x.state !== "done");
           if (ped) extra.push("Gående framåt: släpp fram dem som är på väg ut eller går över.");
           if (RL.active) extra.push("Järnvägskorsning: stanna när ljuset blinkar och bommarna fälls.");
+          if (cond === "dimma") extra.push("Dålig sikt: anpassa farten efter förhållandena.");
           const n = nodes.find((x) => !x.exited);
           if (n && n.boxIn - Sf < 160) {
             const L = n.L;
@@ -1672,10 +1746,10 @@ export default function Index() {
                 checks.push({ t: "Placera dig nära mitten och släpp fram mötande", ok: null });
               } else if (G.blinker) checks.push({ t: "Slå av blinkersen, du ska köra rakt fram", ok: false });
               if (L.control === "stop") checks.push({ t: "Stanna helt vid stopplinjen", ok: n.minV < 0.4 });
-              if (L.control === "light") checks.push({ t: `Signalen visar ${n.lt.phase === "green" ? "grönt" : n.lt.phase === "yellow" ? "gult" : "rött"}`, ok: n.lt.phase === "green" ? true : false });
+              if (L.control === "light") checks.push({ t: `Signalen visar ${n.lt.phase === "green" ? "grönt" : n.lt.phase === "yellow" ? "gult" : "rött"}`, ok: n.lt.phase === "green" });
             }
             p = { title: CONTROL_INFO[L.control].title, rule: CONTROL_INFO[L.control].rule, checks, extra };
-          } else p = { title: "Körning", rule: "Håll hastighetsgränsen, kör mjukt och planera i god tid.", checks: [], extra };
+          } else p = { title: "Körning", rule: "Var uppmärksam på skyltar och andra trafikanter. Kör mjukt och planera i god tid.", checks: [], extra };
         } else if (lot) {
           const lookedBack = G.t - G.lastBack < 4;
           const checks: { t: string; ok: boolean | null }[] = [];
@@ -1684,7 +1758,7 @@ export default function Index() {
             checks.push({ t: "Lägg i backen (R)", ok: M.gear === "R" });
             checks.push({ t: "Titta bakåt medan du backar (håll mellanslag)", ok: lookedBack });
           }
-          checks.push({ t: "Håll gångfart, under 10 km/h", ok: Math.abs(M.v) * 3.6 <= 10 });
+          checks.push({ t: "Håll gångfart", ok: Math.abs(M.v) * 3.6 <= 10 });
           p = {
             title: lot.task === "back" ? "Backparkering" : lot.task === "front" ? "Framåtparkering" : "Fickparkering",
             rule: lot.task === "back" ? "Backa in i den gröna rutan och stanna rakt med fronten utåt."
@@ -1704,7 +1778,6 @@ export default function Index() {
       needleRef.current?.setAttribute("transform", `rotate(${-120 + (Math.min(120, kmh) / 120) * 240} 50 50)`);
       if (speedRef.current) speedRef.current.textContent = String(Math.round(kmh));
       wheelRef.current?.setAttribute("transform", `rotate(${G.wheel} 50 50)`);
-      if (limitRef.current) limitRef.current.textContent = G.mode === "town" ? String(limitAt(P.s)) : "10";
       if (gearRef.current) gearRef.current.textContent = G.mode === "town" ? "D" : M.gear;
       const on = !!G.blinker && Math.floor((G.t - G.blinkSince) / 0.38) % 2 === 0;
       if (blinkLRef.current) blinkLRef.current.style.opacity = G.blinker === "left" && on ? "1" : "0.15";
@@ -1773,12 +1846,12 @@ export default function Index() {
       if (e.code === "KeyQ") blink("left");
       if (e.code === "KeyE") blink("right");
       if (e.code === "KeyR") gear();
-      if (e.code === "Enter" && !G.running) start();
     };
     const ku = (e: KeyboardEvent) => { if (map[e.code]) keys.current[map[e.code]] = false; };
     window.addEventListener("keydown", kd);
     window.addEventListener("keyup", ku);
 
+    applyCond(cond);
     setupTown();
     let raf = 0;
     let lastT = performance.now();
@@ -1813,6 +1886,17 @@ export default function Index() {
     };
   }, []);
 
+  const selectLesson = (id: string) => {
+    const L = LESSONS.find((l) => l.id === id) ?? LESSONS[0];
+    setLessonId(L.id);
+    setHelp(L.help);
+    setQuizOn(L.quiz);
+    settings.current.help = L.help;
+    settings.current.quiz = L.quiz;
+  };
+  const startLesson = (id: string) => { selectLesson(id); api.current?.start(id); };
+  const randomLesson = (exclude?: string) => pick(LESSONS.filter((l) => l.id !== exclude)).id;
+
   const hold = (k: keyof Keys) => ({
     onPointerDown: (e: React.PointerEvent) => { e.preventDefault(); keys.current[k] = true; },
     onPointerUp: () => { keys.current[k] = false; },
@@ -1823,6 +1907,29 @@ export default function Index() {
   const countList = (list: string[]) => Object.entries(list.reduce<Record<string, number>>((acc, f) => { acc[f] = (acc[f] || 0) + 1; return acc; }, {}));
   const ticks = Array.from({ length: 13 }, (_, i) => i * 10);
   const mirrorStyle = (r: typeof MR, radius: string) => ({ left: `${r.x * 100}%`, top: `${r.y * 100}%`, width: `${r.w * 100}%`, height: `${r.h * 100}%`, boxShadow: "0 0 0 5px #121212, 0 6px 14px rgba(0,0,0,.5)", borderRadius: radius });
+
+  const lessonPicker = (
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+      {LESSONS.map((l) => (
+        <button
+          key={l.id}
+          onClick={() => selectLesson(l.id)}
+          className={`rounded-xl p-3 text-left text-sm border ${lessonId === l.id ? "border-sky-400 bg-sky-900/40" : "border-white/10 bg-slate-800 hover:bg-slate-700"}`}
+        >
+          <div className="font-semibold">{l.title}</div>
+          <div className="text-xs text-slate-400">{l.desc}</div>
+        </button>
+      ))}
+    </div>
+  );
+
+  const toggles = (
+    <div className="flex flex-wrap gap-4 text-sm">
+      <label className="flex items-center gap-2"><input type="checkbox" checked={voice} onChange={(e) => setVoice(e.target.checked)} /> Körlärarens röst</label>
+      <label className="flex items-center gap-2"><input type="checkbox" checked={quizOn} onChange={(e) => setQuizOn(e.target.checked)} /> Teorifrågor</label>
+      <label className="flex items-center gap-2"><input type="checkbox" checked={help} onChange={(e) => setHelp(e.target.checked)} /> Regelhjälp</label>
+    </div>
+  );
 
   return (
     <div className="fixed inset-0 bg-black overflow-hidden select-none text-white">
@@ -1900,10 +2007,7 @@ export default function Index() {
             <text ref={speedRef} x="50" y="76" fill="#fff" fontSize="12" fontWeight="700" textAnchor="middle" fontFamily="system-ui">0</text>
             <text x="50" y="85" fill="#9aa1ab" fontSize="5.5" textAnchor="middle" fontFamily="system-ui">km/h</text>
           </svg>
-          <div className="flex flex-col items-center gap-2">
-            <div className="rounded-full flex items-center justify-center font-bold text-black" style={{ width: "5.5vh", height: "5.5vh", background: "#f6cf1a", border: "0.7vh solid #d21f1f", fontSize: "2vh" }}><span ref={limitRef}>50</span></div>
-            <div className="rounded-md bg-black/60 px-2 font-mono font-bold text-sky-300" style={{ fontSize: "2.2vh" }}><span ref={gearRef}>D</span></div>
-          </div>
+          <div className="rounded-md bg-black/60 px-2 font-mono font-bold text-sky-300" style={{ fontSize: "2.4vh" }}><span ref={gearRef}>D</span></div>
           <svg ref={blinkRRef} viewBox="0 0 20 20" style={{ width: "4vh", opacity: 0.15 }}><polygon points="18,10 9,3 9,7 2,7 2,13 9,13 9,17" fill="#22c55e" /></svg>
         </div>
         <div className="absolute left-1/2 -translate-x-1/2" style={{ width: "62vh", height: "62vh", bottom: "-31vh" }}>
@@ -1929,14 +2033,17 @@ export default function Index() {
             <div className="text-base md:text-lg">Blinkers höger ➡</div>
             <div className="text-xs opacity-70">Tangent E</div>
           </button>
-          {!touch && (
-            <div className="pointer-events-none absolute right-3 top-3 rounded-xl bg-slate-900/80 px-3 py-2 text-xs leading-relaxed">
-              ↑ gas · ↓ broms<br />
-              {mode === "town" ? "← → eller A / D titta åt sidan" : "← → styr · A / D titta åt sidan"}<br />
-              mellanslag: titta bakåt<br />
-              Q / E blinkers{mode === "maneuver" ? " · R framåt/back" : ""}
-            </div>
-          )}
+          <div className="pointer-events-none absolute right-3 top-3 rounded-xl bg-slate-900/80 px-3 py-2 text-xs leading-relaxed text-right">
+            {running && <div className="font-semibold text-sky-300">{running.title} · {running.cond}</div>}
+            {!touch && (
+              <>
+                ↑ gas · ↓ broms<br />
+                {mode === "town" ? "← → eller A / D titta åt sidan" : "← → styr · A / D titta åt sidan"}<br />
+                mellanslag: titta bakåt<br />
+                Q / E blinkers{mode === "maneuver" ? " · R framåt/back" : ""}
+              </>
+            )}
+          </div>
           {mode === "maneuver" && (
             <button onClick={() => api.current?.quit()} className="absolute left-1/2 -translate-x-1/2 top-3 rounded-xl bg-slate-800/90 px-3 py-2 text-xs">Avsluta manövreringen</button>
           )}
@@ -1946,12 +2053,12 @@ export default function Index() {
       {touch && phase === "running" && (
         <>
           <div className="absolute left-3 flex flex-wrap gap-2 w-40" style={{ bottom: "17%" }}>
-            {mode === "maneuver" ? (
+            {mode === "maneuver" && (
               <>
                 <button {...hold("left")} className="touch-none w-16 h-14 rounded-2xl bg-white/20 text-lg">◀</button>
                 <button {...hold("right")} className="touch-none w-16 h-14 rounded-2xl bg-white/20 text-lg">▶</button>
               </>
-            ) : null}
+            )}
             <button {...hold("lookL")} className="touch-none w-16 h-12 rounded-2xl bg-white/15 text-xs">Titta vänster</button>
             <button {...hold("lookR")} className="touch-none w-16 h-12 rounded-2xl bg-white/15 text-xs">Titta höger</button>
             <button {...hold("back")} className="touch-none w-[8.5rem] h-10 rounded-2xl bg-white/15 text-xs">Titta bakåt</button>
@@ -2000,32 +2107,22 @@ export default function Index() {
       {/* Start och resultat */}
       {phase !== "running" && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/70 p-4 overflow-y-auto">
-          <div className="w-full max-w-lg rounded-2xl bg-slate-900 p-6 space-y-4 shadow-2xl my-auto">
+          <div className="w-full max-w-2xl rounded-2xl bg-slate-900 p-6 space-y-4 shadow-2xl my-auto">
             {phase === "start" ? (
               <>
                 <h1 className="text-2xl font-bold">Övningskörning inför körkortet</h1>
                 <p className="text-sm text-slate-300">
-                  Varje lektion slumpas: korsningar, svängar, vägmärken, gående, cyklister, järnväg och teorifrågor kommer i ny ordning varje gång. Du börjar med en utfart från en parkering, kör genom stan och avslutar med en infart och en manövrering.
+                  Välj en lektion eller slumpa. Varje gång byggs en ny stad med nya korsningar, skyltar, trafikanter och väder. Läraren säger bara vart du ska köra, inte vad som gäller, så du måste själv läsa skyltarna och vara uppmärksam.
                 </p>
-                <div className="rounded-xl bg-slate-800 p-3 text-sm space-y-1">
-                  <p><b>↑ / ↓</b> gas och broms</p>
-                  <p><b>Q</b> blinkers vänster · <b>E</b> blinkers höger (eller de stora knapparna)</p>
-                  <p><b>A / D</b> eller <b>← / →</b> titta åt vänster och höger, även döda vinkeln</p>
-                  <p><b>Mellanslag</b> titta bakåt när du backar</p>
+                <div className="rounded-xl bg-slate-800 p-3 text-xs space-y-1 text-slate-300">
+                  <p><b>↑ / ↓</b> gas och broms · <b>Q / E</b> blinkers vänster/höger</p>
+                  <p><b>A / D</b> eller <b>← / →</b> titta åt sidan och kolla döda vinkeln · <b>mellanslag</b> titta bakåt</p>
                   <p>Vid parkeringen: <b>← / →</b> styr och <b>R</b> växlar mellan framåt och back</p>
-                </div>
-                <div className="rounded-xl bg-slate-800 p-3 text-sm space-y-1">
-                  <p className="font-semibold">Det här övar du på</p>
-                  <p className="text-slate-300">Utfart och infart, högerregeln, väjningsplikt, stopplikt, huvudled, trafiksignal, cirkulationsplats, övergångsställen, skolområde, cyklister i döda vinkeln, järnvägskorsning, hastighetsgränser, blinkers, miljöanpassad körning och parkering.</p>
-                </div>
-                <div className="flex flex-wrap gap-4 text-sm">
-                  <label className="flex items-center gap-2"><input type="checkbox" checked={voice} onChange={(e) => setVoice(e.target.checked)} /> Körlärarens röst</label>
-                  <label className="flex items-center gap-2"><input type="checkbox" checked={quizOn} onChange={(e) => setQuizOn(e.target.checked)} /> Teorifrågor</label>
-                  <label className="flex items-center gap-2"><input type="checkbox" checked={help} onChange={(e) => setHelp(e.target.checked)} /> Regelhjälp (stäng av för provläge)</label>
                 </div>
               </>
             ) : (
               <>
+                <div className="text-xs text-slate-400">{summary?.lesson} · {summary?.cond}</div>
                 <h2 className={`text-xl font-bold ${phase === "crashed" ? "text-red-400" : "text-green-400"}`}>{summary?.reason}</h2>
                 <div className="grid grid-cols-3 gap-2 text-center">
                   <div className="rounded-xl bg-slate-800 p-3"><div className="text-2xl font-bold">{summary?.faults.length}</div><div className="text-xs text-slate-400">körfel</div></div>
@@ -2045,9 +2142,16 @@ export default function Index() {
                     <ul className="text-sm text-slate-300 space-y-1">{countList(summary.eco).map(([f, n]) => <li key={f}>• {f}{n > 1 ? ` (${n} gånger)` : ""}</li>)}</ul>
                   </div>
                 )}
+                <button onClick={() => startLesson(randomLesson(lessonId))} className="w-full rounded-xl bg-green-600 hover:bg-green-500 py-3 font-semibold">Nästa lektion: nytt scenario</button>
+                <p className="text-sm font-semibold pt-2">Eller välj själv</p>
               </>
             )}
-            <button onClick={() => api.current?.start()} className="w-full rounded-xl bg-blue-600 hover:bg-blue-500 py-3 font-semibold">{phase === "start" ? "Starta lektionen" : "Ny slumpad lektion"}</button>
+            {lessonPicker}
+            {toggles}
+            <div className="flex gap-2">
+              <button onClick={() => startLesson(lessonId)} className="flex-1 rounded-xl bg-blue-600 hover:bg-blue-500 py-3 font-semibold">Starta vald lektion</button>
+              <button onClick={() => startLesson(randomLesson())} className="flex-1 rounded-xl bg-slate-700 hover:bg-slate-600 py-3 font-semibold">Slumpa lektion</button>
+            </div>
           </div>
         </div>
       )}
