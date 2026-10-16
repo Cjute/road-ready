@@ -1,26 +1,27 @@
-# Pixel Perfect Pal
+# Omkörningsövning 🚗
 
-Implement exactly the screenshot and nothing else
+**Practise the hardest parts of the driving test, step by step.**
 
-This project was built with [Lovable](https://lovable.dev).
+Omkörningsövning is a driving practice simulator for learner drivers in Sweden. It breaks down three moments many people find stressful, overtaking on a country road, parallel parking and reverse parking, and walks you through each one with a clear method you can repeat until it feels natural.
 
-**Live app**: https://pixel-perfect-pal-827.lovable.app
+| | | |
+|:-:|:-:|:-:|
+| <img src="shots/1.png" width="260"> | <img src="shots/2.png" width="260"> | <img src="shots/3.png" width="260"> |
 
-## Build with Lovable
+## What it does
 
-Continue developing this project in the [Lovable editor](https://lovable.dev/projects/98cd4d23-7e3d-40b6-acfb-a905657a9d23).
+- **Overtaking** — practise judging speed, distance and timing on a 90 road, with indicators and live feedback on when it's safe to pass
+- **Parallel parking** — steer, switch between drive and reverse, and see the wheel angle as you go
+- **Reverse parking** — the same step-by-step method for backing into a space
+- **Step cards** — every exercise is split into small steps, so you always know what to do next
+- **Feedback** — mistakes and good moves are logged as you drive, so you can see what to work on
 
-- **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: every change made in Lovable is committed straight to this repository.
-- **Full ownership**: this code is yours. Push to `main` on GitHub and your changes sync back into Lovable, ready for your next prompt.
+Works on desktop with the keyboard and on phone with on-screen controls.
 
-## Development
+## Why I built it
 
-Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
+Learning to drive is mostly about building calm habits, but you only get so many lessons. I wanted a place to practise the method in between, without the stress of real traffic.
 
-```sh
-git clone <this-repository-url>
-cd <repository-name>
-npm i
-npm run dev
-```
+## Built with
+
+Lovable
